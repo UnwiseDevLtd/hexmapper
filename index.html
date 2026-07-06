@@ -9,7 +9,7 @@
   (at your option) any later version.
 
   This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY. without even the implied warranty of
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU Affero General Public License for more details.
 
@@ -30,7 +30,7 @@
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
   body{background:var(--bg);color:var(--tx);font:13px/1.4 ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif;display:flex;overflow:hidden}
-  #side{width:264px;flex:0 0 264px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:10px}
+  #side{width:268px;flex:0 0 268px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:10px}
   #main{flex:1;position:relative;display:flex;flex-direction:column}
   #bar{height:30px;background:var(--panel2);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 12px;font-size:12px;color:var(--dim)}
   #bar b{color:var(--tx)}
@@ -38,15 +38,17 @@
   #stage.panning{cursor:grab}
   #stage.panning:active{cursor:grabbing}
   canvas{position:absolute;inset:0;display:block;touch-action:none}
-  h3{margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
-  .tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .tool{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 7px;cursor:pointer;text-align:left;color:var(--tx)}
+  h3{margin:14px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+  .grp{margin-bottom:2px}
+  .grp > .gh{font-size:10px;color:var(--dim);margin:6px 0 3px;text-transform:uppercase;letter-spacing:.06em}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .tool{display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 6px;cursor:pointer;text-align:left;color:var(--tx)}
   .tool:hover{border-color:var(--acc)}
   .tool.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset;background:#2c3243}
-  .tool .sw{width:16px;height:16px;border-radius:4px;flex:0 0 16px;border:1px solid rgba(0,0,0,.4)}
-  .tool .t{display:flex;flex-direction:column;line-height:1.15}
-  .tool .t small{color:var(--dim);font-size:10px}
-  .tool .k{margin-left:auto;font-size:10px;color:var(--dim);background:#1b1d22;border-radius:3px;padding:1px 4px}
+  .tool .sw{width:15px;height:15px;border-radius:4px;flex:0 0 15px;border:1px solid rgba(0,0,0,.4)}
+  .tool .t{display:flex;flex-direction:column;line-height:1.1;min-width:0}
+  .tool .t span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tool .k{margin-left:auto;font-size:9px;color:var(--dim);background:#1b1d22;border-radius:3px;padding:1px 4px;flex:0 0 auto}
   label{display:block;margin:8px 0 3px;color:var(--dim);font-size:11px}
   input[type=range]{width:100%}
   .row{display:flex;gap:6px;flex-wrap:wrap}
@@ -65,8 +67,7 @@
 <body>
 
 <div id="side">
-  <h3>Terrain</h3>
-  <div class="tools" id="palette"></div>
+  <div id="palette"></div>
 
   <h3>Background image</h3>
   <label class="filebtn" for="bgfile" id="bglabel">Upload map image…</label>
@@ -109,14 +110,15 @@
   <div class="hint">
     <b>Left-drag</b> paint &nbsp;·&nbsp; <b>Right/Middle-drag</b> pan<br>
     <b>Wheel</b> zoom to cursor &nbsp;·&nbsp; hold <code>Space</code> to pan<br>
-    Keys <code>1</code>–<code>9</code> select tools &nbsp;·&nbsp; <code>0</code> erase
+    Keys: <code>1</code>–<code>9</code> terrain · <code>0</code> erase<br>
+    <code>r</code> river <code>v</code> village <code>c</code> city <code>p</code> ? <code>k</code> skull <code>e</code> cave
   </div>
   <div class="hint" style="margin-top:8px;color:var(--acc2)">Autosaves to this browser.</div>
 </div>
 
 <div id="main">
   <div id="bar">
-    <span>Tool: <b id="curtool">Desert</b></span>
+    <span>Tool: <b id="curtool">Trees</b></span>
     <span>Hex: <b id="curhex">—</b></span>
     <span>Zoom: <b id="curzoom">100%</b></span>
     <span style="margin-left:auto;color:var(--dim)">100 × 100 hexes</span>
@@ -130,59 +132,73 @@
 <script>
 "use strict";
 const COLS=100, ROWS=100;
-const S=24;                       // hex circumradius (world px)
-const W=Math.sqrt(3)*S, Hh=2*S;
+const S=24;                                  // hex circumradius (world px)
+const W=Math.sqrt(3)*S;
 const PAD=S;
-const GRID_W = PAD*2 + W*COLS + W/2;
-const GRID_H = PAD*2 + S + 1.5*S*(ROWS-1) + S;
+const GRID_W=PAD*2 + W*COLS + W/2;
+const GRID_H=PAD*2 + S + 1.5*S*(ROWS-1) + S;
+const idx=(c,r)=>r*COLS+c;
+const inB=(c,r)=>c>=0&&c<COLS&&r>=0&&r<ROWS;
 
-// ---- terrain / tool definitions ----
-// id 0 = empty (transparent). Terrain ids start at 1.
+// ---- terrain ids ----
+// water(9,10) + lava(11,12) merge across shared edges; everything else is gridded.
 const TERR={
-  1:{label:"Desert",     fill:"#E6D38A", sym:"#9C7B2E"},
-  2:{label:"Hills/Farm", fill:"#C7DD8C", sym:"#58732A"},
-  3:{label:"Forest",     fill:"#4F8A43", sym:"#15301A"},
-  4:{label:"Marsh",      fill:"#C2A86B", sym:"#5C4924"},
-  5:{label:"Mountains",  fill:"#3b3b3b", sym:"#d9d9d9"},
-  6:{label:"River",      fill:"#5BA3CF", sym:"#16466a"},
-  7:{label:"Fog (NW shade)", fill:"#6f6f6f", sym:"#3f3f3f"},
+  1:{label:"Trees",         fill:"#6fb249", sym:"#163b1c"},
+  2:{label:"Forest",        fill:"#2f6e2f", sym:"#0a210d"},
+  3:{label:"Grasslands",    fill:"#bcdc7e", sym:"#54701f"},
+  4:{label:"Hills",         fill:"#93b65a", sym:"#3a521a"},
+  5:{label:"Plains",        fill:"#d9d3a3", sym:"#8f8651"},
+  6:{label:"Desert",        fill:"#e6d38a", sym:"#8a6a22"},
+  7:{label:"Small mountain",fill:"#7a7066", sym:"#ece8e1"},
+  8:{label:"Large mountain",fill:"#3b3b3b", sym:"#ffffff"},
+  9:{label:"Shallow water", fill:"#5fa8d3", sym:"#1d5f8a", merge:true},
+ 10:{label:"Deep water",    fill:"#1f5c92", sym:"#0c3358", merge:true},
+ 11:{label:"Shallow lava",  fill:"#f4a03a", sym:"#6e3300", merge:true},
+ 12:{label:"Deep lava",     fill:"#b83227", sym:"#ffd27a", merge:true},
+ 13:{label:"Marsh",         fill:"#bca771", sym:"#54401c"},
+ 14:{label:"Fog / unknown", fill:"#6f6f6f", sym:"#3f3f3f"},
 };
-// tool list (order = key 1..n). kind: terrain(id) / town / erase
-const TOOLS=[
-  {key:1,kind:"terrain",id:1},
-  {key:2,kind:"terrain",id:2},
-  {key:3,kind:"terrain",id:3},
-  {key:4,kind:"terrain",id:4},
-  {key:5,kind:"terrain",id:5},
-  {key:6,kind:"terrain",id:6},
-  {key:7,kind:"terrain",id:7},
-  {key:8,kind:"town"},
-  {key:9,kind:"erase"},
+const GROUPS=[
+ {name:"Vegetation", items:[1,2]},
+ {name:"Grassland",   items:[3,4]},
+ {name:"Dryland",     items:[5,6]},
+ {name:"Mountains",   items:[7,8]},
+ {name:"Water",       items:[9,10]},
+ {name:"Lava",        items:[11,12]},
+ {name:"Wet / hidden",items:[13,14]},
 ];
-let active = {kind:"terrain",id:1};
+// overlay tools
+const OV=[
+ {kind:"river",  label:"River",   key:"r", sw:"#2f7ab8"},
+ {kind:"entity", id:1, label:"Village", key:"v", sw:"#ffd479"},
+ {kind:"entity", id:2, label:"City",    key:"c", sw:"#6f6f78"},
+ {kind:"entity", id:3, label:"? PoI",   key:"p", sw:"#ffe14d"},
+ {kind:"entity", id:4, label:"Skull",   key:"k", sw:"#eeeeee"},
+ {kind:"entity", id:5, label:"Cave",    key:"e", sw:"#5b524a"},
+];
+const ENT_NAME={1:"Village",2:"City",3:"? PoI",4:"Skull",5:"Cave"};
+
+let active={kind:"terrain",id:1};
 
 // ---- data ----
-const terrain = new Uint8Array(ROWS*COLS);
-const towns   = new Uint8Array(ROWS*COLS);
-const idx=(c,r)=>r*COLS+c;
+const terrain=new Uint8Array(ROWS*COLS);
+const rivers =new Uint8Array(ROWS*COLS);
+const entity =new Uint8Array(ROWS*COLS); // 0 none,1 village,2 city,3 poi,4 skull,5 cave
 
 // ---- canvas / camera ----
-const cv  = document.getElementById("cv");
-const ctx = cv.getContext("2d");
+const cv=document.getElementById("cv");
+const ctx=cv.getContext("2d");
 const stage=document.getElementById("stage");
-// offscreen world-sized canvas (everything drawn in world coords)
 const world=document.createElement("canvas");
 world.width=Math.ceil(GRID_W); world.height=Math.ceil(GRID_H);
 const wctx=world.getContext("2d");
-
 let cam={x:0,y:0,z:1};
-let bgImg=null, bgOp=0.45, bgScaleMul=1, bgOffX=0, bgOffY=0, bgFit=1;
-let dirty=true;          // world canvas needs rebuild
-let hover={c:-1,r:-1};
+let bgImg=null,bgOp=0.45,bgScaleMul=1,bgOffX=0,bgOffY=0;
+let dirty=true, hover={c:-1,r:-1};
 
 function resize(){
   const dpr=Math.min(window.devicePixelRatio||1,2);
-  const w=stage.clientWidth, h=stage.clientHeight;
+  const w=stage.clientWidth,h=stage.clientHeight;
   cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
   cv.style.width=w+"px"; cv.style.height=h+"px";
   ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -192,461 +208,424 @@ window.addEventListener("resize",resize);
 
 // ---- hex math (pointy-top, odd-r offset) ----
 function center(c,r){
-  const cx=PAD + W/2 + W*c + (r&1)*(W/2);
-  const cy=PAD + S + 1.5*S*r;
-  return [cx,cy];
+  return [PAD+W/2+W*c+(r&1)*(W/2), PAD+S+1.5*S*r];
+}
+const VERTS=[[0,-S],[W/2,-S/2],[W/2,S/2],[0,S],[-W/2,S/2],[-W/2,-S/2]];
+const AXIAL_DIRS=[[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]]; // E,NE,NW,W,SW,SE
+const EDGE_MID =[[W/2,0],[W/4,-3*S/4],[-W/4,-3*S/4],[-W/2,0],[-W/4,3*S/4],[W/4,3*S/4]]; // E,NE,NW,W,SW,SE
+const EDGEDIR=[1,0,5,4,3,2]; // edge i (between VERTS[i],VERTS[i+1]) -> neighbor dir index
+function neighbors(c,r){
+  const q0=c-((r-(r&1))>>1), r0=r, out=[];
+  for(const [dq,dr] of AXIAL_DIRS){
+    const q=q0+dq, rr=r0+dr;
+    out.push([q+((rr-(rr&1))>>1), rr]);
+  }
+  return out;
 }
 function hexPath(g,cx,cy){
   g.beginPath();
-  g.moveTo(cx, cy-S);
-  g.lineTo(cx+W/2, cy-S/2);
-  g.lineTo(cx+W/2, cy+S/2);
-  g.lineTo(cx, cy+S);
-  g.lineTo(cx-W/2, cy+S/2);
-  g.lineTo(cx-W/2, cy-S/2);
+  g.moveTo(cx,cy-S);
+  g.lineTo(cx+W/2,cy-S/2); g.lineTo(cx+W/2,cy+S/2);
+  g.lineTo(cx,cy+S);
+  g.lineTo(cx-W/2,cy+S/2); g.lineTo(cx-W/2,cy-S/2);
   g.closePath();
 }
-function clientToWorld(clientX,clientY){
-  const rect=cv.getBoundingClientRect();
-  const sx=clientX-rect.left, sy=clientY-rect.top;
-  return [(sx-cam.x)/cam.z, (sy-cam.y)/cam.z];
+function clientToWorld(x,y){
+  const rc=cv.getBoundingClientRect();
+  return [(x-rc.left-cam.x)/cam.z,(y-rc.top-cam.y)/cam.z];
 }
 function worldToHex(x,y){
   const px=x-(PAD+W/2), py=y-(PAD+S);
-  const q=(Math.sqrt(3)/3*px - 1/3*py)/S;
-  const r=(2/3*py)/S;
-  // cube round
-  const s=-q-r;
+  const q=(Math.sqrt(3)/3*px-1/3*py)/S, r=(2/3*py)/S, s=-q-r;
   let rq=Math.round(q),rr=Math.round(r),rs=Math.round(s);
   const dq=Math.abs(rq-q),dr=Math.abs(rr-r),ds=Math.abs(rs-s);
   if(dq>dr&&dq>ds) rq=-rr-rs; else if(dr>ds) rr=-rq-rs;
-  // axial -> odd-r offset
-  const col=rq+((rr-(rr&1))>>1), row=rr;
-  return [col,row];
+  return [rq+((rr-(rr&1))>>1), rr];
 }
 
-// ---- symbols (drawn in world units, current stroke/fill = sym color) ----
-function drawSym(g,id,cx,cy){
-  g.save();
-  g.lineJoin="round"; g.lineCap="round";
-  if(id===1){ // desert: dunes (two humps)
-    g.lineWidth=S*0.14;
-    g.beginPath();
-    g.arc(cx-S*0.30, cy+S*0.10, S*0.30, Math.PI*1.05, Math.PI*1.95);
-    g.arc(cx+S*0.30, cy+S*0.10, S*0.30, Math.PI*1.05, Math.PI*1.95);
-    g.stroke();
-  } else if(id===2){ // hills/farm: two small peaks
-    g.lineWidth=S*0.14;
-    g.beginPath();
-    g.moveTo(cx-S*0.45, cy+S*0.30);
-    g.lineTo(cx-S*0.22, cy-S*0.10);
-    g.lineTo(cx,        cy+S*0.30);
-    g.moveTo(cx+S*0.02, cy+S*0.30);
-    g.lineTo(cx+S*0.25, cy-S*0.10);
-    g.lineTo(cx+S*0.48, cy+S*0.30);
-    g.stroke();
-  } else if(id===3){ // forest: tree
-    g.lineWidth=S*0.10;
-    g.beginPath();
-    g.moveTo(cx, cy-S*0.42);
-    g.lineTo(cx+S*0.30, cy+S*0.18);
-    g.lineTo(cx-S*0.30, cy+S*0.18);
-    g.closePath(); g.fill();
-    g.fillRect(cx-S*0.06, cy+S*0.14, S*0.12, S*0.20);
-  } else if(id===4){ // marsh: two waves
-    g.lineWidth=S*0.11;
-    wave(g,cx-S*0.42,cx+S*0.42,cy-S*0.12,S*0.12);
-    wave(g,cx-S*0.42,cx+S*0.42,cy+S*0.18,S*0.12);
-  } else if(id===5){ // mountains: snow peak
-    g.beginPath();
-    g.moveTo(cx, cy-S*0.45);
-    g.lineTo(cx+S*0.42, cy+S*0.28);
-    g.lineTo(cx-S*0.42, cy+S*0.28);
-    g.closePath(); g.fill();
-  } else if(id===6){ // river: vertical wave
-    g.lineWidth=S*0.13;
-    wave(g,cx,cx,cy-S*0.45,cy+S*0.45,S*0.16,true);
-  } else if(id===7){ // fog: hatch (handled as pattern overlay too)
-    g.lineWidth=S*0.07;
-    for(let i=-2;i<=2;i++){
+// ---- merge keys ----
+function tKey(c,r){ const t=terrain[idx(c,r)]; return (t>=9&&t<=12)?("t"+t):null; }
+function cKey(c,r){ return entity[idx(c,r)]===2?"city":null; }
+
+// stroke hex outline, skipping edges shared with a same-key neighbour (merge)
+function outlineHex(g,c,r,keyFn){
+  const [cx,cy]=center(c,r), self=keyFn(c,r), ns=neighbors(c,r);
+  if(!self){ hexPath(g,cx,cy); g.stroke(); return; }
+  for(let i=0;i<6;i++){
+    const [nc,nr]=ns[EDGEDIR[i]];
+    let same=false;
+    if(inB(nc,nr)&&self===keyFn(nc,nr)) same=true;
+    if(!same){
+      const a=VERTS[i],b=VERTS[(i+1)%6];
+      g.beginPath(); g.moveTo(cx+a[0],cy+a[1]); g.lineTo(cx+b[0],cy+b[1]); g.stroke();
+    }
+  }
+}
+
+// ---- symbols ----
+function tree(g,x,y,sz,col){
+  g.fillStyle=col;
+  g.beginPath(); g.moveTo(x,y-sz*0.5); g.lineTo(x+sz*0.32,y+sz*0.2); g.lineTo(x-sz*0.32,y+sz*0.2); g.closePath(); g.fill();
+  g.fillRect(x-sz*0.06,y+sz*0.16,sz*0.12,sz*0.22);
+}
+function waveH(g,cx,cy,scale){
+  g.lineWidth=S*0.12*scale;
+  g.beginPath();
+  const x0=cx-S*0.42, x1=cx+S*0.42, steps=4, dx=(x1-x0)/steps;
+  g.moveTo(x0,cy);
+  for(let i=1;i<=steps;i++){ const mx=x0+dx*(i-0.5),xx=x0+dx*i; g.quadraticCurveTo(mx,cy+(i%2?S*0.1:-S*0.1),xx,cy); }
+  g.stroke();
+}
+function drawTerrain(g,id,cx,cy){
+  const sym=TERR[id].sym; g.fillStyle=sym; g.strokeStyle=sym; g.lineJoin="round"; g.lineCap="round";
+  switch(id){
+    case 1: tree(g,cx,cy,S*0.95,sym); break;
+    case 2: tree(g,cx-S*0.22,cy+S*0.06,S*0.7,sym); tree(g,cx+S*0.22,cy+S*0.06,S*0.7,sym); tree(g,cx,cy-S*0.18,S*0.82,sym); break;
+    case 3: g.lineWidth=S*0.07;
+      for(const [tx,ty] of [[-0.25,0.12],[0.05,-0.06],[0.25,0.16]]){ g.beginPath(); g.moveTo(cx+tx*S,cy+ty*S); g.lineTo(cx+tx*S,cy+(ty-0.13)*S); g.stroke(); }
+      break;
+    case 4: g.lineWidth=S*0.13;
       g.beginPath();
-      g.moveTo(cx-S*0.40, cy+i*S*0.18);
-      g.lineTo(cx+S*0.40, cy+i*S*0.18 - S*0.18);
-      g.stroke();
-    }
+      g.moveTo(cx-S*0.42,cy+S*0.28); g.lineTo(cx-S*0.2,cy-S*0.05); g.lineTo(cx+S*0.02,cy+S*0.28);
+      g.moveTo(cx-S*0.02,cy+S*0.28); g.lineTo(cx+S*0.2,cy-S*0.05); g.lineTo(cx+S*0.42,cy+S*0.28);
+      g.stroke(); break;
+    case 5: for(const [tx,ty] of [[-0.2,0.1],[0.1,-0.06],[0.22,0.2],[-0.08,-0.16]]){ g.beginPath(); g.arc(cx+tx*S,cy+ty*S,S*0.045,0,7); g.fill(); } break;
+    case 6: g.lineWidth=S*0.14;
+      g.beginPath();
+      g.arc(cx-S*0.28,cy+S*0.12,S*0.3,Math.PI*1.05,Math.PI*1.95);
+      g.arc(cx+S*0.28,cy+S*0.12,S*0.3,Math.PI*1.05,Math.PI*1.95);
+      g.stroke(); break;
+    case 7: g.beginPath(); g.moveTo(cx,cy-S*0.36); g.lineTo(cx+S*0.34,cy+S*0.22); g.lineTo(cx-S*0.34,cy+S*0.22); g.closePath(); g.fill(); break;
+    case 8: g.beginPath(); g.moveTo(cx,cy-S*0.46); g.lineTo(cx+S*0.44,cy+S*0.3); g.lineTo(cx-S*0.44,cy+S*0.3); g.closePath(); g.fill();
+      g.save(); g.fillStyle="#fff"; g.beginPath(); g.moveTo(cx,cy-S*0.46); g.lineTo(cx+S*0.16,cy-S*0.06); g.lineTo(cx-S*0.16,cy-S*0.06); g.closePath(); g.fill(); g.restore();
+      break;
+    case 9: waveH(g,cx,cy,1); break;
+    case 10: waveH(g,cx,cy,1); waveH(g,cx,cy-S*0.24,0.8); break;
+    case 11: waveH(g,cx,cy,1); break;
+    case 12: waveH(g,cx,cy,1); waveH(g,cx,cy-S*0.24,0.8); break;
+    case 13: g.lineWidth=S*0.1; waveH(g,cx,cy+S*0.18,0.9);
+      g.lineWidth=S*0.06;
+      for(const tx of [-0.2,0.05,0.25]){ const ty=-0.05; g.beginPath(); g.moveTo(cx+tx*S,cy+ty*S); g.lineTo(cx+tx*S,cy+ty*S-S*0.22); g.stroke(); }
+      break;
+    case 14: g.lineWidth=S*0.07;
+      for(let i=-2;i<=2;i++){ g.beginPath(); g.moveTo(cx-S*0.4,cy+i*S*0.18); g.lineTo(cx+S*0.4,cy+i*S*0.18-S*0.16); g.stroke(); }
+      break;
   }
+}
+function house(g,cx,cy,sz){
+  g.save(); g.fillStyle="#ffd479"; g.strokeStyle="#3a2a00"; g.lineWidth=1.1;
+  g.beginPath(); g.moveTo(cx,cy-sz*0.34); g.lineTo(cx+sz*0.3,cy-sz*0.05); g.lineTo(cx-sz*0.3,cy-sz*0.05); g.closePath(); g.fill(); g.stroke();
+  g.fillRect(cx-sz*0.2,cy-sz*0.05,sz*0.4,sz*0.3); g.strokeRect(cx-sz*0.2,cy-sz*0.05,sz*0.4,sz*0.3);
   g.restore();
 }
-function wave(g,x0,x1,y,amp,vertical){
-  g.beginPath();
-  if(vertical){
-    g.moveTo(y,x0);
-    const steps=4, dy=(x1-x0)/steps;
-    for(let i=1;i<=steps;i++){
-      const cy=x0+dy*(i-0.5), yy=x0+dy*i;
-      g.quadraticCurveTo(y+(i%2?amp:-amp), cy, yy, yy);
-    }
-    g.stroke();
-  } else {
-    g.moveTo(x0,y);
-    const steps=6, dx=(x1-x0)/steps;
-    for(let i=1;i<=steps;i++){
-      const cx=x0+dx*(i-0.5), x=x0+dx*i;
-      g.quadraticCurveTo(cx, y+(i%2?amp:-amp), x, y);
-    }
-    g.stroke();
-  }
+function cityTexture(g,cx,cy){
+  g.save(); g.fillStyle="#d7dae3";
+  for(const [x,y,w,h] of [[-0.2,-0.04,0.16,0.24],[0.06,0.02,0.14,0.2],[-0.04,-0.2,0.12,0.16]]) g.fillRect(cx+x*S,cy+y*S,w*S,h*S);
+  g.restore();
 }
-function drawTown(g,cx,cy){
+function drawSkull(g,cx,cy){
+  g.save(); g.fillStyle="#eee"; g.strokeStyle="#2b2b2b"; g.lineWidth=1.1;
+  g.beginPath(); g.arc(cx,cy-S*0.04,S*0.27,0,Math.PI*2); g.fill(); g.stroke();
+  g.fillStyle="#222";
+  g.beginPath(); g.arc(cx-S*0.1,cy-S*0.06,S*0.07,0,Math.PI*2); g.fill();
+  g.beginPath(); g.arc(cx+S*0.1,cy-S*0.06,S*0.07,0,Math.PI*2); g.fill();
+  g.beginPath(); g.arc(cx,cy+S*0.05,S*0.04,0,Math.PI*2); g.fill();
+  g.strokeStyle="#2b2b2b"; g.beginPath(); g.moveTo(cx-S*0.12,cy+S*0.2); g.lineTo(cx+S*0.12,cy+S*0.2); g.stroke();
+  g.restore();
+}
+function drawCave(g,cx,cy){
   g.save();
-  g.fillStyle="#ffd479"; g.strokeStyle="#3a2a00"; g.lineWidth=1.2;
-  // roof
-  g.beginPath();
-  g.moveTo(cx, cy-S*0.34);
-  g.lineTo(cx+S*0.30, cy-S*0.05);
-  g.lineTo(cx-S*0.30, cy-S*0.05);
-  g.closePath(); g.fill(); g.stroke();
-  // body
-  g.fillRect(cx-S*0.20, cy-S*0.05, S*0.40, S*0.30);
-  g.strokeRect(cx-S*0.20, cy-S*0.05, S*0.40, S*0.30);
+  g.fillStyle="#5b524a";
+  g.beginPath(); g.moveTo(cx-S*0.34,cy+S*0.28); g.lineTo(cx-S*0.34,cy-S*0.1);
+  g.arc(cx,cy-S*0.1,S*0.34,Math.PI,0,false); g.lineTo(cx+S*0.34,cy+S*0.28); g.closePath(); g.fill();
+  g.fillStyle="#0c0c0c";
+  g.beginPath(); g.moveTo(cx-S*0.2,cy+S*0.24); g.lineTo(cx-S*0.2,cy-S*0.02);
+  g.arc(cx,cy-S*0.02,S*0.2,Math.PI,0,false); g.lineTo(cx+S*0.2,cy+S*0.24); g.closePath(); g.fill();
   g.restore();
 }
+function drawEntity(g,type,cx,cy){
+  if(type===1){ house(g,cx,cy,S*0.9); return; }
+  if(type===2){ cityTexture(g,cx,cy); return; }
+  if(type===3){
+    g.save(); g.textAlign="center"; g.textBaseline="middle";
+    g.font=`bold ${Math.round(S*1.15)}px ui-sans-serif,system-ui,sans-serif`;
+    g.lineWidth=3; g.strokeStyle="#000"; g.strokeText("?",cx,cy);
+    g.fillStyle="#ffe14d"; g.fillText("?",cx,cy); g.restore(); return;
+  }
+  if(type===4){ drawSkull(g,cx,cy); return; }
+  if(type===5){ drawCave(g,cx,cy); return; }
+}
+const RIVER_COLOR="#2f7ab8";
 
-// ---- build the world canvas (bg + grid + towns) ----
+// ---- build the world canvas ----
 function buildWorld(includeBg){
-  const g=wctx;
-  g.setTransform(1,0,0,1,0,0);
-  g.clearRect(0,0,world.width,world.height);
-
-  if(includeBg && bgImg){
-    const fit=Math.min(GRID_W/bgImg.width, GRID_H/bgImg.height)*bgFit*bgScaleMul;
+  const g=wctx; g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,world.width,world.height);
+  if(includeBg&&bgImg){
+    const fit=Math.min(GRID_W/bgImg.width,GRID_H/bgImg.height)*bgScaleMul;
     const dw=bgImg.width*fit, dh=bgImg.height*fit;
-    const dx=(GRID_W-dw)/2 + bgOffX, dy=(GRID_H-dh)/2 + bgOffY;
+    const dx=(GRID_W-dw)/2+bgOffX, dy=(GRID_H-dh)/2+bgOffY;
     g.globalAlpha=bgOp; g.drawImage(bgImg,dx,dy,dw,dh); g.globalAlpha=1;
   }
-
-  // hexes
-  g.lineWidth=1;
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const [cx,cy]=center(c,r);
-      const t=terrain[idx(c,r)];
-      hexPath(g,cx,cy);
-      if(t){ g.fillStyle=TERR[t].fill; g.fill(); }
-      g.strokeStyle="rgba(0,0,0,0.32)"; g.stroke();
-      if(t){
-        g.strokeStyle=TERR[t].sym; g.fillStyle=TERR[t].sym;
-        drawSym(g,t,cx,cy);
-      }
-      if(towns[idx(c,r)]) drawTown(g,cx,cy);
-    }
+  // terrain fills
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const t=terrain[idx(c,r)]; if(!t) continue;
+    const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill();
   }
-  // outer border
-  g.strokeStyle="rgba(255,255,255,0.15)"; g.lineWidth=2;
-  g.strokeRect(0,0,GRID_W,GRID_H);
+  // grid outlines (merge-aware for water/lava)
+  g.strokeStyle="rgba(0,0,0,0.32)"; g.lineWidth=1;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
+  // terrain symbols
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const t=terrain[idx(c,r)]; if(!t) continue;
+    const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy);
+  }
+  // city overlay (merges across shared edges)
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(entity[idx(c,r)]!==2) continue;
+    const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle="#6f6f78"; g.fill();
+  }
+  g.strokeStyle="rgba(0,0,0,0.5)"; g.lineWidth=1.2;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2) outlineHex(g,c,r,cKey);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2){ const [cx,cy]=center(c,r); cityTexture(g,cx,cy); }
+  // rivers: connect each river tile's centre to the midpoint of every shared river edge
+  g.save(); g.strokeStyle=RIVER_COLOR; g.lineWidth=S*0.18; g.lineCap="round"; g.lineJoin="round";
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(!rivers[idx(c,r)]) continue;
+    const [cx,cy]=center(c,r), ns=neighbors(c,r);
+    for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(!inB(nc,nr)||!rivers[idx(nc,nr)]) continue; const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); }
+  }
+  g.restore();
+  // other entities (village, poi, skull, cave)
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const e=entity[idx(c,r)]; if(e===0||e===2) continue;
+    const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy);
+  }
+  g.strokeStyle="rgba(255,255,255,0.15)"; g.lineWidth=2; g.strokeRect(0,0,GRID_W,GRID_H);
 }
 
-// ---- main render ----
+// ---- render ----
 function render(){
   if(dirty){ buildWorld(true); dirty=false; }
-  const w=cv.clientWidth, h=cv.clientHeight;
-  ctx.setTransform(window.devicePixelRatio||1,0,0,window.devicePixelRatio||1,0,0);
-  ctx.clearRect(0,0,w,h);
-  // world -> screen via cam: screen = world*z + cam
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=cv.clientWidth,h=cv.clientHeight;
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
   ctx.imageSmoothingEnabled=true;
-  ctx.drawImage(world, cam.x, cam.y, world.width*cam.z, world.height*cam.z);
-  // crisp hover preview
-  if(hover.c>=0 && hover.r>=0){
+  ctx.drawImage(world,cam.x,cam.y,world.width*cam.z,world.height*cam.z);
+  if(hover.c>=0&&hover.r>=0){
     const [cx,cy]=center(hover.c,hover.r);
     const sx=cx*cam.z+cam.x, sy=cy*cam.z+cam.y;
-    ctx.save();
-    ctx.translate(sx,sy); ctx.scale(cam.z,cam.z);
-    const prev = previewStyle();
-    hexPath(ctx,0,0);
-    if(prev.fill){ ctx.fillStyle=prev.fill; ctx.fill(); }
-    ctx.strokeStyle="#fff"; ctx.lineWidth=1.5/cam.z; ctx.stroke();
-    if(prev.sym){ ctx.strokeStyle=prev.sym; ctx.fillStyle=prev.sym; drawSym(ctx,prev.id||0,0,0); }
-    if(prev.town) drawTown(ctx,0,0);
+    ctx.save(); ctx.translate(sx,sy); ctx.scale(cam.z,cam.z);
+    drawPreview(ctx); 
+    hexPath(ctx,0,0); ctx.strokeStyle="#fff"; ctx.lineWidth=1.5/cam.z; ctx.stroke();
     ctx.restore();
   }
 }
-function previewStyle(){
-  if(active.kind==="terrain") return {id:active.id, fill:TERR[active.id].fill+"55", sym:TERR[active.id].sym, id_:active.id};
-  if(active.kind==="town")    return {town:true};
-  return {fill:"rgba(255,255,255,0.12)"};
+function drawPreview(g){
+  g.globalAlpha=0.5;
+  if(active.kind==="terrain"){
+    const t=active.id; hexPath(g,0,0); g.fillStyle=TERR[t].fill; g.fill();
+    drawTerrain(g,t,0,0);
+  } else if(active.kind==="river"){
+    g.strokeStyle=RIVER_COLOR; g.lineWidth=S*0.18; g.lineCap="round";
+    const ns=neighbors(hover.c,hover.r);
+    for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(inB(nc,nr)&&rivers[idx(nc,nr)]){ const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(0,0); g.lineTo(mx,my); g.stroke(); } }
+    g.fillStyle=RIVER_COLOR; g.beginPath(); g.arc(0,0,S*0.12,0,7); g.fill();
+  } else if(active.kind==="entity"){
+    if(active.id===2){ hexPath(g,0,0); g.fillStyle="#6f6f78"; g.fill(); }
+    drawEntity(g,active.id,0,0);
+  }
+  g.globalAlpha=1;
 }
 
-// ---- camera ops ----
+// ---- camera ----
 function clampZ(z){return Math.max(0.06,Math.min(10,z));}
-function zoomAt(clientX,clientY,factor){
-  const rect=cv.getBoundingClientRect();
-  const sx=clientX-rect.left, sy=clientY-rect.top;
+function zoomAt(x,y,f){
+  const rc=cv.getBoundingClientRect(), sx=x-rc.left, sy=y-rc.top;
   const [wx,wy]=[(sx-cam.x)/cam.z,(sy-cam.y)/cam.z];
-  cam.z=clampZ(cam.z*factor);
-  cam.x=sx-wx*cam.z; cam.y=sy-wy*cam.z;
-  render();
+  cam.z=clampZ(cam.z*f); cam.x=sx-wx*cam.z; cam.y=sy-wy*cam.z; render();
 }
 function fitGrid(){
-  const w=cv.clientWidth-20, h=cv.clientHeight-20;
+  const w=cv.clientWidth-20,h=cv.clientHeight-20;
   cam.z=clampZ(Math.min(w/GRID_W,h/GRID_H));
-  cam.x=cv.clientWidth/2-(GRID_W/2)*cam.z;
-  cam.y=cv.clientHeight/2-(GRID_H/2)*cam.z;
-  render();
+  cam.x=cv.clientWidth/2-(GRID_W/2)*cam.z; cam.y=cv.clientHeight/2-(GRID_H/2)*cam.z; render();
 }
 
 // ---- painting ----
+let strokeVal=1; // resolved at pointerdown (river toggle value)
 function paintHex(c,r){
-  if(c<0||c>=COLS||r<0||r>=ROWS) return;
+  if(!inB(c,r)) return;
   const i=idx(c,r);
-  if(active.kind==="erase"){ terrain[i]=0; towns[i]=0; }
-  else if(active.kind==="town"){ towns[i]=1; }
-  else { terrain[i]=active.id; }
+  switch(active.kind){
+    case "erase":   terrain[i]=0; rivers[i]=0; entity[i]=0; break;
+    case "terrain": terrain[i]=active.id; break;
+    case "river":   rivers[i]=strokeVal; break;
+    case "entity":  entity[i]=active.id; break;
+  }
   dirty=true;
 }
 function paintLine(c0,r0,c1,r1){
   const dc=c1-c0, dr=r1-r0, steps=Math.max(Math.abs(dc),Math.abs(dr));
   if(steps===0){ paintHex(c1,r1); return; }
-  for(let s=0;s<=steps;s++){
-    paintHex(Math.round(c0+dc*s/steps), Math.round(r0+dr*s/steps));
-  }
+  for(let s=0;s<=steps;s++) paintHex(Math.round(c0+dc*s/steps),Math.round(r0+dr*s/steps));
 }
 
-// ---- pointer handling ----
-let mode=null, lastHex=null, panStart=null, space=false;
+// ---- pointer ----
+let mode=null,lastHex=null,panStart=null,space=false;
 stage.addEventListener("contextmenu",e=>e.preventDefault());
-
 stage.addEventListener("pointerdown",e=>{
   stage.setPointerCapture(e.pointerId);
-  const pan = e.button===1 || e.button===2 || space;
-  if(pan){
-    mode="pan"; panStart={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y};
-    stage.classList.add("panning");
-  } else {
-    mode="paint";
-    const [wx,wy]=clientToWorld(e.clientX,e.clientY);
-    const [c,r]=worldToHex(wx,wy);
-    paintHex(c,r); lastHex={c,r};
-    scheduleSave(); render();
+  if(e.button===1||e.button===2||space){
+    mode="pan"; panStart={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y}; stage.classList.add("panning"); return;
   }
+  mode="paint";
+  const [wx,wy]=clientToWorld(e.clientX,e.clientY);
+  const [c,r]=worldToHex(wx,wy);
+  if(inB(c,r)&&active.kind==="river") strokeVal=rivers[idx(c,r)]?0:1; else strokeVal=1;
+  paintHex(c,r); lastHex={c,r}; scheduleSave(); render();
 });
 stage.addEventListener("pointermove",e=>{
   const [wx,wy]=clientToWorld(e.clientX,e.clientY);
-  const [c,r]=worldToHex(wx,wy);
-  hover={c,r};
-  document.getElementById("curhex").textContent =
-    (c>=0&&c<COLS&&r>=0&&r<ROWS)? `(${c}, ${r})` : "—";
-  if(mode==="pan"){
-    cam.x=panStart.cx+(e.clientX-panStart.x);
-    cam.y=panStart.cy+(e.clientY-panStart.y);
-    render();
-  } else if(mode==="paint"){
-    if(lastHex) paintLine(lastHex.c,lastHex.r,c,r); else paintHex(c,r);
-    lastHex={c,r};
-    scheduleSave(); render();
-  } else {
-    render();
-  }
+  const [c,r]=worldToHex(wx,wy); hover={c,r};
+  document.getElementById("curhex").textContent=inB(c,r)?`(${c}, ${r})`:"—";
+  if(mode==="pan"){ cam.x=panStart.cx+(e.clientX-panStart.x); cam.y=panStart.cy+(e.clientY-panStart.y); render(); }
+  else if(mode==="paint"){ if(lastHex) paintLine(lastHex.c,lastHex.r,c,r); else paintHex(c,r); lastHex={c,r}; scheduleSave(); render(); }
+  else render();
 });
-function endPointer(e){
-  if(mode==="paint") scheduleSave(true);
-  mode=null; lastHex=null; stage.classList.remove("panning");
-  try{stage.releasePointerCapture(e.pointerId);}catch(_){}
-  render();
-}
-stage.addEventListener("pointerup",endPointer);
-stage.addEventListener("pointercancel",endPointer);
-stage.addEventListener("pointerleave",()=>{hover={c:-1,r:-1};if(mode!=="paint")render();});
-
-stage.addEventListener("wheel",e=>{
-  e.preventDefault();
-  const f=e.deltaY<0?1.12:1/1.12;
-  zoomAt(e.clientX,e.clientY,f);
-},{passive:false});
+function endPtr(e){ if(mode==="paint") scheduleSave(true); mode=null; lastHex=null; stage.classList.remove("panning"); try{stage.releasePointerCapture(e.pointerId);}catch(_){} render(); }
+stage.addEventListener("pointerup",endPtr);
+stage.addEventListener("pointercancel",endPtr);
+stage.addEventListener("pointerleave",()=>{ hover={c:-1,r:-1}; if(mode!=="paint") render(); });
+stage.addEventListener("wheel",e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY,e.deltaY<0?1.12:1/1.12); },{passive:false});
 
 window.addEventListener("keydown",e=>{
-  if(e.code==="Space"){ space=true; stage.classList.add("panning"); }
-  if(e.key>="0"&&e.key<="9"){ const t=TOOLS.find(t=>t.key==+e.key); if(t) selectTool(t); }
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if(e.code==="Space"){ space=true; stage.classList.add("panning"); return; }
+  if(e.key>="1"&&e.key<="9"){ const id=+e.key; if(TERR[id]) selectTool({kind:"terrain",id}); }
+  else if(e.key==="0") selectTool({kind:"erase"});
+  else { const o=OV.find(o=>o.key===e.key.toLowerCase()); if(o) selectTool(o.kind==="entity"?{kind:"entity",id:o.id}:{kind:"river"}); }
 });
-window.addEventListener("keyup",e=>{
-  if(e.code==="Space"){ space=false; if(mode!=="pan") stage.classList.remove("panning"); }
-});
+window.addEventListener("keyup",e=>{ if(e.code==="Space"){ space=false; if(mode!=="pan") stage.classList.remove("panning"); } });
 
-// ---- palette / tools UI ----
-const pal=document.getElementById("palette");
-function toolLabel(t){ return t.kind==="terrain"?TERR[t.id].label : t.kind==="town"?"Town":"Erase"; }
-function buildPalette(){
-  pal.innerHTML="";
-  TOOLS.forEach(t=>{
-    const b=document.createElement("button");
-    b.className="tool";
-    const lbl=toolLabel(t);
-    let swStyle="", desc="";
-    if(t.kind==="terrain"){ swStyle=`background:${TERR[t.id].fill}`; desc=TERR[t.id].label; }
-    else if(t.kind==="town"){ swStyle=`background:linear-gradient(135deg,#ffd479,#caa23e)`; desc="settlement"; }
-    else { swStyle=`background:repeating-linear-gradient(45deg,#333,#333 3px,#444 3px,#444 6px)`; desc="clear"; }
-    b.innerHTML=`<span class="sw" style="${swStyle}"></span>
-      <span class="t"><span>${lbl}</span><small>${desc}</small></span>
-      <span class="k">${t.key}</span>`;
-    b.onclick=()=>selectTool(t);
-    b.dataset.key=t.key;
-    pal.appendChild(b);
-  });
-  reflectTool();
-}
-function selectTool(t){
-  if(t.kind==="terrain") active={kind:"terrain",id:t.id};
-  else active={kind:t.kind};
-  reflectTool(); render();
-}
+// ---- palette ----
+const palEl=document.getElementById("palette");
+function selectTool(a){ active=a; reflectTool(); render(); }
+function toolName(a){ if(a.kind==="terrain") return TERR[a.id].label; if(a.kind==="entity") return ENT_NAME[a.id]; if(a.kind==="river") return "River"; return "Erase"; }
 function reflectTool(){
-  const cur=active.kind==="terrain"?`terrain-${active.id}`:active.kind;
   document.querySelectorAll(".tool").forEach(b=>{
-    const t=TOOLS.find(x=>x.key==b.dataset.key);
-    const on = (t.kind==="terrain"&&active.kind==="terrain"&&active.id===t.id)
-            || (t.kind!=="terrain"&&active.kind===t.kind);
+    const k=b.dataset.k, t=JSON.parse(b.dataset.t);
+    const on=(t.kind==="terrain"&&active.kind==="terrain"&&active.id===t.id)||(t.kind!=="terrain"&&active.kind===t.kind&&(t.kind!=="entity"||active.id===t.id));
     b.classList.toggle("on",on);
   });
-  const t=TOOLS.find(x=>{
-    if(x.kind!=="terrain") return active.kind===x.kind;
-    return active.kind==="terrain"&&active.id===x.id;
-  });
-  document.getElementById("curtool").textContent = t?toolLabel(t):"—";
+  document.getElementById("curtool").textContent=toolName(active);
+}
+function swatchFor(t){
+  if(t.kind==="terrain") return `background:${TERR[t.id].fill}`;
+  if(t.kind==="river") return `background:${OV.find(o=>o.kind==="river").sw}`;
+  if(t.kind==="entity") return `background:${OV.find(o=>o.kind==="entity"&&o.id===t.id).sw}`;
+  return `background:repeating-linear-gradient(45deg,#333,#333 3px,#444 3px,#444 6px)`;
+}
+function btn(t,label,key){
+  const b=document.createElement("button");
+  b.className="tool"; b.dataset.k=key; b.dataset.t=JSON.stringify(t);
+  b.innerHTML=`<span class="sw" style="${swatchFor(t)}"></span><span class="t"><span>${label}</span></span><span class="k">${key}</span>`;
+  b.onclick=()=>selectTool(t);
+  return b;
+}
+function buildPalette(){
+  palEl.innerHTML="";
+  for(const grp of GROUPS){
+    const w=document.createElement("div"); w.className="grp";
+    const h=document.createElement("div"); h.className="gh"; h.textContent=grp.name; w.appendChild(h);
+    const gw=document.createElement("div"); gw.className="tools";
+    grp.items.forEach((id,i)=>{ gw.appendChild(btn({kind:"terrain",id},TERR[id].label, id<=9?String(id):"")); });
+    w.appendChild(gw); palEl.appendChild(w);
+  }
+  const ow=document.createElement("div"); ow.className="grp";
+  const oh=document.createElement("div"); oh.className="gh"; oh.textContent="Overlays"; ow.appendChild(oh);
+  const ogw=document.createElement("div"); ogw.className="tools";
+  OV.forEach(o=> ogw.appendChild(btn(o.kind==="entity"?{kind:"entity",id:o.id}:{kind:"river"},o.label,o.key)));
+  ow.appendChild(ogw); palEl.appendChild(ow);
+  const ew=document.createElement("div"); ew.className="grp";
+  const egw=document.createElement("div"); egw.className="tools";
+  egw.appendChild(btn({kind:"erase"},"Erase","0")); ew.appendChild(egw); palEl.appendChild(ew);
+  reflectTool();
 }
 
-// ---- background controls ----
-const bgfile=document.getElementById("bgfile");
-bgfile.addEventListener("change",e=>{
-  const f=e.target.files[0]; if(!f) return;
-  loadImage(f);
-});
+// ---- background ----
+document.getElementById("bgfile").addEventListener("change",e=>{ const f=e.target.files[0]; if(f) loadImage(f); });
 function loadImage(file){
-  const url=URL.createObjectURL(file);
-  const img=new Image();
+  const url=URL.createObjectURL(file), img=new Image();
   img.onload=()=>{ bgImg=img; bgScaleMul=1; bgOffX=0; bgOffY=0;
-    document.getElementById("bgscale").value=100; document.getElementById("bgx").value=0;
-    document.getElementById("bgy").value=0; document.getElementById("scv").textContent="100%";
-    document.getElementById("bgstatus").textContent=`${file.name} — ${img.width}×${img.height}`;
-    document.getElementById("bglabel").textContent="Replace image…";
-    dirty=true; render();
-  };
+    document.getElementById("bgscale").value=100; document.getElementById("bgx").value=0; document.getElementById("bgy").value=0;
+    document.getElementById("scv").textContent="100%"; document.getElementById("bgstatus").textContent=`${file.name} — ${img.width}×${img.height}`;
+    document.getElementById("bglabel").textContent="Replace image…"; dirty=true; render(); };
   img.src=url;
 }
-document.getElementById("bgop").addEventListener("input",e=>{
-  bgOp=e.target.value/100; document.getElementById("opv").textContent=e.target.value+"%"; dirty=true; render();
-});
-document.getElementById("bgscale").addEventListener("input",e=>{
-  bgScaleMul=e.target.value/100; document.getElementById("scv").textContent=e.target.value+"%"; dirty=true; render();
-});
-document.getElementById("bgx").addEventListener("input",e=>{bgOffX=+e.target.value;dirty=true;render();});
-document.getElementById("bgy").addEventListener("input",e=>{bgOffY=+e.target.value;dirty=true;render();});
-document.getElementById("bgfit").onclick=()=>{bgScaleMul=1;bgOffX=0;bgOffY=0;
-  document.getElementById("bgscale").value=100;document.getElementById("bgx").value=0;
-  document.getElementById("bgy").value=0;document.getElementById("scv").textContent="100%";dirty=true;render();};
-document.getElementById("bgclear").onclick=()=>{bgImg=null;document.getElementById("bgstatus").textContent="No background loaded.";document.getElementById("bglabel").textContent="Upload map image…";dirty=true;render();};
-
-// drag-drop onto stage
+document.getElementById("bgop").addEventListener("input",e=>{ bgOp=e.target.value/100; document.getElementById("opv").textContent=e.target.value+"%"; dirty=true; render(); });
+document.getElementById("bgscale").addEventListener("input",e=>{ bgScaleMul=e.target.value/100; document.getElementById("scv").textContent=e.target.value+"%"; dirty=true; render(); });
+document.getElementById("bgx").addEventListener("input",e=>{ bgOffX=+e.target.value; dirty=true; render(); });
+document.getElementById("bgy").addEventListener("input",e=>{ bgOffY=+e.target.value; dirty=true; render(); });
+document.getElementById("bgfit").onclick=()=>{ bgScaleMul=1; bgOffX=0; bgOffY=0;
+  document.getElementById("bgscale").value=100; document.getElementById("bgx").value=0; document.getElementById("bgy").value=0;
+  document.getElementById("scv").textContent="100%"; dirty=true; render(); };
+document.getElementById("bgclear").onclick=()=>{ bgImg=null; document.getElementById("bgstatus").textContent="No background loaded."; document.getElementById("bglabel").textContent="Upload map image…"; dirty=true; render(); };
 stage.addEventListener("dragover",e=>{e.preventDefault();stage.classList.add("drag");});
 stage.addEventListener("dragleave",()=>stage.classList.remove("drag"));
-stage.addEventListener("drop",e=>{
-  e.preventDefault(); stage.classList.remove("drag");
-  const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith("image")) loadImage(f);
-});
+stage.addEventListener("drop",e=>{ e.preventDefault(); stage.classList.remove("drag"); const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith("image")) loadImage(f); });
 
 // ---- view buttons ----
-document.getElementById("zin").onclick=()=>zoomAt(cv.getBoundingClientRect().left+cv.clientWidth/2,cv.getBoundingClientRect().top+cv.clientHeight/2,1.25);
-document.getElementById("zout").onclick=()=>zoomAt(cv.getBoundingClientRect().left+cv.clientWidth/2,cv.getBoundingClientRect().top+cv.clientHeight/2,1/1.25);
+const ctr=()=>({l:cv.getBoundingClientRect().left+cv.clientWidth/2,t:cv.getBoundingClientRect().top+cv.clientHeight/2});
+document.getElementById("zin").onclick=()=>{const c=ctr();zoomAt(c.l,c.t,1.25);};
+document.getElementById("zout").onclick=()=>{const c=ctr();zoomAt(c.l,c.t,1/1.25);};
 document.getElementById("zfit").onclick=fitGrid;
-document.getElementById("z1").onclick=()=>{cam.z=1;cam.x=cv.clientWidth/2-(GRID_W/2);cam.y=cv.clientHeight/2-(GRID_H/2);render();};
+document.getElementById("z1").onclick=()=>{ cam.z=1; cam.x=cv.clientWidth/2-(GRID_W/2); cam.y=cv.clientHeight/2-(GRID_H/2); render(); };
 
-// ---- data: export / save / load / clear ----
-document.getElementById("export").onclick=()=>{
-  const tmp=document.createElement("canvas");
-  tmp.width=world.width; tmp.height=world.height;
-  const g=tmp.getContext("2d");
-  // draw without background for a clean hex map
-  const realBg=bgImg, realOp=bgOp; bgImg=null;
-  buildWorld.call.__onlyForExport(g);
-  bgImg=realBg;
-  const a=document.createElement("a"); a.download="hexmap.png"; a.href=tmp.toDataURL("image/png"); a.click();
-};
-// export helper using shared drawing
+// ---- data ----
 function exportDraw(g){
-  // replicate buildWorld but on arbitrary ctx, no bg
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-    const [cx,cy]=center(c,r);
-    const t=terrain[idx(c,r)];
-    hexPath(g,cx,cy);
-    if(t){g.fillStyle=TERR[t].fill;g.fill();}
-    g.strokeStyle="rgba(0,0,0,0.4)";g.lineWidth=1;g.stroke();
-    if(t){g.strokeStyle=TERR[t].sym;g.fillStyle=TERR[t].sym;drawSym(g,t,cx,cy);}
-    if(towns[idx(c,r)]) drawTown(g,cx,cy);
+    const t=terrain[idx(c,r)]; if(!t) continue;
+    const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill();
   }
+  g.strokeStyle="rgba(0,0,0,0.4)"; g.lineWidth=1; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(t){ const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); } }
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ if(entity[idx(c,r)]!==2) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle="#6f6f78"; g.fill(); }
+  g.strokeStyle="rgba(0,0,0,0.5)"; g.lineWidth=1.2; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2) outlineHex(g,c,r,cKey);
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2){ const [cx,cy]=center(c,r); cityTexture(g,cx,cy); }
+  g.save(); g.strokeStyle=RIVER_COLOR; g.lineWidth=S*0.18; g.lineCap="round"; g.lineJoin="round";
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ if(!rivers[idx(c,r)]) continue; const [cx,cy]=center(c,r),ns=neighbors(c,r); for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(!inB(nc,nr)||!rivers[idx(nc,nr)]) continue; const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); } }
+  g.restore();
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const e=entity[idx(c,r)]; if(e===0||e===2) continue; const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy); }
 }
-// wire export properly
 document.getElementById("export").onclick=()=>{
-  const tmp=document.createElement("canvas");
-  tmp.width=Math.ceil(GRID_W); tmp.height=Math.ceil(GRID_H);
-  const g=tmp.getContext("2d");
-  exportDraw(g);
-  const a=document.createElement("a"); a.download="hexmap.png"; a.href=tmp.toDataURL("image/png"); a.click();
+  const t=document.createElement("canvas"); t.width=Math.ceil(GRID_W); t.height=Math.ceil(GRID_H);
+  exportDraw(t.getContext("2d")); const a=document.createElement("a"); a.download="hexmap.png"; a.href=t.toDataURL("image/png"); a.click();
 };
-
 document.getElementById("save").onclick=()=>{
-  const data={v:1,cols:COLS,rows:ROWS,terrain:Array.from(terrain),towns:Array.from(towns)};
-  const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
-  const a=document.createElement("a"); a.download="hexmap.json"; a.href=URL.createObjectURL(blob); a.click();
+  const data={v:2,cols:COLS,rows:ROWS,terrain:Array.from(terrain),rivers:Array.from(rivers),entity:Array.from(entity)};
+  const a=document.createElement("a"); a.download="hexmap.json"; a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:"application/json"})); a.click();
 };
 document.getElementById("loadfile").addEventListener("change",e=>{
-  const f=e.target.files[0]; if(!f) return;
-  const rd=new FileReader();
-  rd.onload=()=>{
-    try{
-      const d=JSON.parse(rd.result);
-      if(d.cols!==COLS||d.rows!==ROWS){alert("JSON dimensions don't match 100×100.");return;}
-      terrain.set(d.terrain); towns.set(d.towns);
-      dirty=true; render(); scheduleSave(true);
-    }catch(err){alert("Invalid JSON: "+err.message);}
-  };
+  const f=e.target.files[0]; if(!f) return; const rd=new FileReader();
+  rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
+    if(d.cols!==COLS||d.rows!==ROWS){alert("JSON dimensions don't match 100×100.");return;}
+    terrain.set(d.terrain||[]); rivers.set(d.rivers||[]); entity.set(d.entity||[]);
+    dirty=true; render(); scheduleSave(true);
+  }catch(err){alert("Invalid JSON: "+err.message);} };
   rd.readAsText(f);
 });
-document.getElementById("clear").onclick=()=>{
-  if(!confirm("Clear all hexes?")) return;
-  terrain.fill(0); towns.fill(0); dirty=true; render(); scheduleSave(true);
-};
+document.getElementById("clear").onclick=()=>{ if(!confirm("Clear all hexes?")) return; terrain.fill(0); rivers.fill(0); entity.fill(0); dirty=true; render(); scheduleSave(true); };
 
 // ---- autosave ----
-let saveTimer=null;
-function scheduleSave(force){
-  if(saveTimer) clearTimeout(saveTimer);
-  saveTimer=setTimeout(doSave, force?0:500);
-}
-const STORE="hexmapper.v1";
-function doSave(){
-  try{
-    localStorage.setItem(STORE,JSON.stringify({
-      terrain:Array.from(terrain),towns:Array.from(towns),cam:cam
-    }));
-  }catch(_){}
-}
-function loadSaved(){
-  try{
-    const s=localStorage.getItem(STORE); if(!s) return;
-    const d=JSON.parse(s);
-    if(d.terrain) terrain.set(d.terrain);
-    if(d.towns) towns.set(d.towns);
-    if(d.cam){ cam.x=d.cam.x; cam.y=d.cam.y; cam.z=d.cam.z; }
-  }catch(_){}
-}
-
-// zoom display
+let saveTimer=null; const STORE="hexmapper.v2";
+function scheduleSave(force){ if(saveTimer) clearTimeout(saveTimer); saveTimer=setTimeout(doSave,force?0:500); }
+function doSave(){ try{ localStorage.setItem(STORE,JSON.stringify({terrain:Array.from(terrain),rivers:Array.from(rivers),entity:Array.from(entity),cam})); }catch(_){} }
+function loadSaved(){ try{ const s=localStorage.getItem(STORE); if(!s) return; const d=JSON.parse(s);
+  if(d.terrain) terrain.set(d.terrain); if(d.rivers) rivers.set(d.rivers); if(d.entity) entity.set(d.entity);
+  if(d.cam){cam.x=d.cam.x;cam.y=d.cam.y;cam.z=d.cam.z;} }catch(_){} }
 setInterval(()=>{document.getElementById("curzoom").textContent=Math.round(cam.z*100)+"%";},200);
 
 // ---- init ----
-buildPalette();
-loadSaved();
-resize();
-fitGrid();
-render();
+buildPalette(); loadSaved(); resize(); fitGrid(); render();
 </script>
 </body>
 </html>
