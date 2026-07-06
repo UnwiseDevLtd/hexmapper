@@ -2,7 +2,7 @@
 
 A small, dependency-free browser tool for **tracing an image into a hex-grid map**. Upload a map picture as a semi-transparent background, then drag over hexes to paint terrain, water, rivers, settlements, and entities. Everything runs client-side; nothing is uploaded.
 
-Single self-contained `index.html`. No build step, no framework. Served via Docker (nginx) by default.
+Single self-contained `index.html`. No build step, no framework. Served via Docker or Podman (nginx) — `make up` auto-detects which.
 
 ## Features
 
@@ -27,7 +27,7 @@ Single self-contained `index.html`. No build step, no framework. Served via Dock
 ## Quick start
 
 ```sh
-make up          # http://localhost:8000  (Docker)
+make up          # http://localhost:8000  (Docker or Podman, auto-detected)
 make down        # stop
 ```
 

@@ -1,6 +1,6 @@
 # AGENTS.md — hexmapper
 
-A single-file, dependency-free browser tool for **tracing an image into a hex-grid map**. Vanilla JS + Canvas. No build step, no framework. Served via Docker (nginx). Treat this as a living system you keep correct.
+A single-file, dependency-free browser tool for **tracing an image into a hex-grid map**. Vanilla JS + Canvas. No build step, no framework. Served via Docker or Podman (nginx) — `make up` auto-detects the engine. Treat this as a living system you keep correct.
 
 ## What this is
 
@@ -10,7 +10,7 @@ Upload a map image as a translucent background, align it under a 100×100 pointy
 
 | Action | Command |
 |--------|---------|
-| Run in Docker | `make up` (http://localhost:8000) |
+| Run in Docker/Podman | `make up` (http://localhost:8000) |
 | Stop | `make down` |
 | Logs | `make logs` |
 | Run without Docker | `make serve` (python) or open `index.html` |
