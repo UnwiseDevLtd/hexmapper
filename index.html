@@ -1,0 +1,652 @@
+<!--
+  hexmapper — trace an image into a hex-grid map, in the browser.
+  Copyright (c) 2026 UnwiseDev
+  SPDX-License-Identifier: AGPL-3.0-or-later
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY. without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hex Mapper</title>
+<style>
+  :root{
+    --bg:#1b1d22; --panel:#252830; --panel2:#2e323c; --line:#3a3f4b;
+    --tx:#e7e9ee; --dim:#9aa0ad; --acc:#6ea8fe; --acc2:#84d6a1;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--tx);font:13px/1.4 ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif;display:flex;overflow:hidden}
+  #side{width:264px;flex:0 0 264px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:10px}
+  #main{flex:1;position:relative;display:flex;flex-direction:column}
+  #bar{height:30px;background:var(--panel2);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 12px;font-size:12px;color:var(--dim)}
+  #bar b{color:var(--tx)}
+  #stage{flex:1;position:relative;overflow:hidden;cursor:crosshair;background:#15161a}
+  #stage.panning{cursor:grab}
+  #stage.panning:active{cursor:grabbing}
+  canvas{position:absolute;inset:0;display:block;touch-action:none}
+  h3{margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .tool{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 7px;cursor:pointer;text-align:left;color:var(--tx)}
+  .tool:hover{border-color:var(--acc)}
+  .tool.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset;background:#2c3243}
+  .tool .sw{width:16px;height:16px;border-radius:4px;flex:0 0 16px;border:1px solid rgba(0,0,0,.4)}
+  .tool .t{display:flex;flex-direction:column;line-height:1.15}
+  .tool .t small{color:var(--dim);font-size:10px}
+  .tool .k{margin-left:auto;font-size:10px;color:var(--dim);background:#1b1d22;border-radius:3px;padding:1px 4px}
+  label{display:block;margin:8px 0 3px;color:var(--dim);font-size:11px}
+  input[type=range]{width:100%}
+  .row{display:flex;gap:6px;flex-wrap:wrap}
+  button.act{background:var(--panel2);border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:12px;flex:1}
+  button.act:hover{border-color:var(--acc)}
+  button.act.danger:hover{border-color:#e27075}
+  input[type=file]{display:none}
+  .filebtn{display:inline-block;background:var(--panel2);border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;width:100%;text-align:center}
+  .filebtn:hover{border-color:var(--acc)}
+  .hint{color:var(--dim);font-size:11px;margin-top:4px}
+  code{background:#1b1d22;padding:1px 5px;border-radius:3px;color:var(--acc2)}
+  #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(40,80,140,.25);border:2px dashed var(--acc);pointer-events:none;font-size:16px;color:var(--tx)}
+  #stage.drag #drop{display:flex}
+</style>
+</head>
+<body>
+
+<div id="side">
+  <h3>Terrain</h3>
+  <div class="tools" id="palette"></div>
+
+  <h3>Background image</h3>
+  <label class="filebtn" for="bgfile" id="bglabel">Upload map image…</label>
+  <input type="file" id="bgfile" accept="image/*">
+  <div class="hint" id="bgstatus">No background loaded.</div>
+  <label>Opacity <span id="opv">45%</span></label>
+  <input type="range" id="bgop" min="0" max="100" value="45">
+  <label>Scale <span id="scv">100%</span></label>
+  <input type="range" id="bgscale" min="20" max="400" value="100">
+  <label>Nudge X / Y</label>
+  <div class="row">
+    <input type="range" id="bgx" min="-400" max="400" value="0" style="flex:1">
+    <input type="range" id="bgy" min="-400" max="400" value="0" style="flex:1">
+  </div>
+  <div class="row" style="margin-top:6px">
+    <button class="act" id="bgfit">Fit to grid</button>
+    <button class="act" id="bgclear">Remove</button>
+  </div>
+
+  <h3>View</h3>
+  <div class="row">
+    <button class="act" id="zin">Zoom +</button>
+    <button class="act" id="zout">Zoom −</button>
+    <button class="act" id="zfit">Fit grid</button>
+    <button class="act" id="z1">1:1</button>
+  </div>
+
+  <h3>Data</h3>
+  <div class="row">
+    <button class="act" id="export">Export PNG</button>
+    <button class="act" id="save">Save JSON</button>
+  </div>
+  <label class="filebtn" for="loadfile" style="margin-top:6px">Load JSON…</label>
+  <input type="file" id="loadfile" accept="application/json,.json">
+  <div class="row" style="margin-top:8px">
+    <button class="act danger" id="clear">Clear all</button>
+  </div>
+
+  <h3>Controls</h3>
+  <div class="hint">
+    <b>Left-drag</b> paint &nbsp;·&nbsp; <b>Right/Middle-drag</b> pan<br>
+    <b>Wheel</b> zoom to cursor &nbsp;·&nbsp; hold <code>Space</code> to pan<br>
+    Keys <code>1</code>–<code>9</code> select tools &nbsp;·&nbsp; <code>0</code> erase
+  </div>
+  <div class="hint" style="margin-top:8px;color:var(--acc2)">Autosaves to this browser.</div>
+</div>
+
+<div id="main">
+  <div id="bar">
+    <span>Tool: <b id="curtool">Desert</b></span>
+    <span>Hex: <b id="curhex">—</b></span>
+    <span>Zoom: <b id="curzoom">100%</b></span>
+    <span style="margin-left:auto;color:var(--dim)">100 × 100 hexes</span>
+  </div>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="drop">Drop image to use as background</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const COLS=100, ROWS=100;
+const S=24;                       // hex circumradius (world px)
+const W=Math.sqrt(3)*S, Hh=2*S;
+const PAD=S;
+const GRID_W = PAD*2 + W*COLS + W/2;
+const GRID_H = PAD*2 + S + 1.5*S*(ROWS-1) + S;
+
+// ---- terrain / tool definitions ----
+// id 0 = empty (transparent). Terrain ids start at 1.
+const TERR={
+  1:{label:"Desert",     fill:"#E6D38A", sym:"#9C7B2E"},
+  2:{label:"Hills/Farm", fill:"#C7DD8C", sym:"#58732A"},
+  3:{label:"Forest",     fill:"#4F8A43", sym:"#15301A"},
+  4:{label:"Marsh",      fill:"#C2A86B", sym:"#5C4924"},
+  5:{label:"Mountains",  fill:"#3b3b3b", sym:"#d9d9d9"},
+  6:{label:"River",      fill:"#5BA3CF", sym:"#16466a"},
+  7:{label:"Fog (NW shade)", fill:"#6f6f6f", sym:"#3f3f3f"},
+};
+// tool list (order = key 1..n). kind: terrain(id) / town / erase
+const TOOLS=[
+  {key:1,kind:"terrain",id:1},
+  {key:2,kind:"terrain",id:2},
+  {key:3,kind:"terrain",id:3},
+  {key:4,kind:"terrain",id:4},
+  {key:5,kind:"terrain",id:5},
+  {key:6,kind:"terrain",id:6},
+  {key:7,kind:"terrain",id:7},
+  {key:8,kind:"town"},
+  {key:9,kind:"erase"},
+];
+let active = {kind:"terrain",id:1};
+
+// ---- data ----
+const terrain = new Uint8Array(ROWS*COLS);
+const towns   = new Uint8Array(ROWS*COLS);
+const idx=(c,r)=>r*COLS+c;
+
+// ---- canvas / camera ----
+const cv  = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const stage=document.getElementById("stage");
+// offscreen world-sized canvas (everything drawn in world coords)
+const world=document.createElement("canvas");
+world.width=Math.ceil(GRID_W); world.height=Math.ceil(GRID_H);
+const wctx=world.getContext("2d");
+
+let cam={x:0,y:0,z:1};
+let bgImg=null, bgOp=0.45, bgScaleMul=1, bgOffX=0, bgOffY=0, bgFit=1;
+let dirty=true;          // world canvas needs rebuild
+let hover={c:-1,r:-1};
+
+function resize(){
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=stage.clientWidth, h=stage.clientHeight;
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  cv.style.width=w+"px"; cv.style.height=h+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  render();
+}
+window.addEventListener("resize",resize);
+
+// ---- hex math (pointy-top, odd-r offset) ----
+function center(c,r){
+  const cx=PAD + W/2 + W*c + (r&1)*(W/2);
+  const cy=PAD + S + 1.5*S*r;
+  return [cx,cy];
+}
+function hexPath(g,cx,cy){
+  g.beginPath();
+  g.moveTo(cx, cy-S);
+  g.lineTo(cx+W/2, cy-S/2);
+  g.lineTo(cx+W/2, cy+S/2);
+  g.lineTo(cx, cy+S);
+  g.lineTo(cx-W/2, cy+S/2);
+  g.lineTo(cx-W/2, cy-S/2);
+  g.closePath();
+}
+function clientToWorld(clientX,clientY){
+  const rect=cv.getBoundingClientRect();
+  const sx=clientX-rect.left, sy=clientY-rect.top;
+  return [(sx-cam.x)/cam.z, (sy-cam.y)/cam.z];
+}
+function worldToHex(x,y){
+  const px=x-(PAD+W/2), py=y-(PAD+S);
+  const q=(Math.sqrt(3)/3*px - 1/3*py)/S;
+  const r=(2/3*py)/S;
+  // cube round
+  const s=-q-r;
+  let rq=Math.round(q),rr=Math.round(r),rs=Math.round(s);
+  const dq=Math.abs(rq-q),dr=Math.abs(rr-r),ds=Math.abs(rs-s);
+  if(dq>dr&&dq>ds) rq=-rr-rs; else if(dr>ds) rr=-rq-rs;
+  // axial -> odd-r offset
+  const col=rq+((rr-(rr&1))>>1), row=rr;
+  return [col,row];
+}
+
+// ---- symbols (drawn in world units, current stroke/fill = sym color) ----
+function drawSym(g,id,cx,cy){
+  g.save();
+  g.lineJoin="round"; g.lineCap="round";
+  if(id===1){ // desert: dunes (two humps)
+    g.lineWidth=S*0.14;
+    g.beginPath();
+    g.arc(cx-S*0.30, cy+S*0.10, S*0.30, Math.PI*1.05, Math.PI*1.95);
+    g.arc(cx+S*0.30, cy+S*0.10, S*0.30, Math.PI*1.05, Math.PI*1.95);
+    g.stroke();
+  } else if(id===2){ // hills/farm: two small peaks
+    g.lineWidth=S*0.14;
+    g.beginPath();
+    g.moveTo(cx-S*0.45, cy+S*0.30);
+    g.lineTo(cx-S*0.22, cy-S*0.10);
+    g.lineTo(cx,        cy+S*0.30);
+    g.moveTo(cx+S*0.02, cy+S*0.30);
+    g.lineTo(cx+S*0.25, cy-S*0.10);
+    g.lineTo(cx+S*0.48, cy+S*0.30);
+    g.stroke();
+  } else if(id===3){ // forest: tree
+    g.lineWidth=S*0.10;
+    g.beginPath();
+    g.moveTo(cx, cy-S*0.42);
+    g.lineTo(cx+S*0.30, cy+S*0.18);
+    g.lineTo(cx-S*0.30, cy+S*0.18);
+    g.closePath(); g.fill();
+    g.fillRect(cx-S*0.06, cy+S*0.14, S*0.12, S*0.20);
+  } else if(id===4){ // marsh: two waves
+    g.lineWidth=S*0.11;
+    wave(g,cx-S*0.42,cx+S*0.42,cy-S*0.12,S*0.12);
+    wave(g,cx-S*0.42,cx+S*0.42,cy+S*0.18,S*0.12);
+  } else if(id===5){ // mountains: snow peak
+    g.beginPath();
+    g.moveTo(cx, cy-S*0.45);
+    g.lineTo(cx+S*0.42, cy+S*0.28);
+    g.lineTo(cx-S*0.42, cy+S*0.28);
+    g.closePath(); g.fill();
+  } else if(id===6){ // river: vertical wave
+    g.lineWidth=S*0.13;
+    wave(g,cx,cx,cy-S*0.45,cy+S*0.45,S*0.16,true);
+  } else if(id===7){ // fog: hatch (handled as pattern overlay too)
+    g.lineWidth=S*0.07;
+    for(let i=-2;i<=2;i++){
+      g.beginPath();
+      g.moveTo(cx-S*0.40, cy+i*S*0.18);
+      g.lineTo(cx+S*0.40, cy+i*S*0.18 - S*0.18);
+      g.stroke();
+    }
+  }
+  g.restore();
+}
+function wave(g,x0,x1,y,amp,vertical){
+  g.beginPath();
+  if(vertical){
+    g.moveTo(y,x0);
+    const steps=4, dy=(x1-x0)/steps;
+    for(let i=1;i<=steps;i++){
+      const cy=x0+dy*(i-0.5), yy=x0+dy*i;
+      g.quadraticCurveTo(y+(i%2?amp:-amp), cy, yy, yy);
+    }
+    g.stroke();
+  } else {
+    g.moveTo(x0,y);
+    const steps=6, dx=(x1-x0)/steps;
+    for(let i=1;i<=steps;i++){
+      const cx=x0+dx*(i-0.5), x=x0+dx*i;
+      g.quadraticCurveTo(cx, y+(i%2?amp:-amp), x, y);
+    }
+    g.stroke();
+  }
+}
+function drawTown(g,cx,cy){
+  g.save();
+  g.fillStyle="#ffd479"; g.strokeStyle="#3a2a00"; g.lineWidth=1.2;
+  // roof
+  g.beginPath();
+  g.moveTo(cx, cy-S*0.34);
+  g.lineTo(cx+S*0.30, cy-S*0.05);
+  g.lineTo(cx-S*0.30, cy-S*0.05);
+  g.closePath(); g.fill(); g.stroke();
+  // body
+  g.fillRect(cx-S*0.20, cy-S*0.05, S*0.40, S*0.30);
+  g.strokeRect(cx-S*0.20, cy-S*0.05, S*0.40, S*0.30);
+  g.restore();
+}
+
+// ---- build the world canvas (bg + grid + towns) ----
+function buildWorld(includeBg){
+  const g=wctx;
+  g.setTransform(1,0,0,1,0,0);
+  g.clearRect(0,0,world.width,world.height);
+
+  if(includeBg && bgImg){
+    const fit=Math.min(GRID_W/bgImg.width, GRID_H/bgImg.height)*bgFit*bgScaleMul;
+    const dw=bgImg.width*fit, dh=bgImg.height*fit;
+    const dx=(GRID_W-dw)/2 + bgOffX, dy=(GRID_H-dh)/2 + bgOffY;
+    g.globalAlpha=bgOp; g.drawImage(bgImg,dx,dy,dw,dh); g.globalAlpha=1;
+  }
+
+  // hexes
+  g.lineWidth=1;
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const [cx,cy]=center(c,r);
+      const t=terrain[idx(c,r)];
+      hexPath(g,cx,cy);
+      if(t){ g.fillStyle=TERR[t].fill; g.fill(); }
+      g.strokeStyle="rgba(0,0,0,0.32)"; g.stroke();
+      if(t){
+        g.strokeStyle=TERR[t].sym; g.fillStyle=TERR[t].sym;
+        drawSym(g,t,cx,cy);
+      }
+      if(towns[idx(c,r)]) drawTown(g,cx,cy);
+    }
+  }
+  // outer border
+  g.strokeStyle="rgba(255,255,255,0.15)"; g.lineWidth=2;
+  g.strokeRect(0,0,GRID_W,GRID_H);
+}
+
+// ---- main render ----
+function render(){
+  if(dirty){ buildWorld(true); dirty=false; }
+  const w=cv.clientWidth, h=cv.clientHeight;
+  ctx.setTransform(window.devicePixelRatio||1,0,0,window.devicePixelRatio||1,0,0);
+  ctx.clearRect(0,0,w,h);
+  // world -> screen via cam: screen = world*z + cam
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(world, cam.x, cam.y, world.width*cam.z, world.height*cam.z);
+  // crisp hover preview
+  if(hover.c>=0 && hover.r>=0){
+    const [cx,cy]=center(hover.c,hover.r);
+    const sx=cx*cam.z+cam.x, sy=cy*cam.z+cam.y;
+    ctx.save();
+    ctx.translate(sx,sy); ctx.scale(cam.z,cam.z);
+    const prev = previewStyle();
+    hexPath(ctx,0,0);
+    if(prev.fill){ ctx.fillStyle=prev.fill; ctx.fill(); }
+    ctx.strokeStyle="#fff"; ctx.lineWidth=1.5/cam.z; ctx.stroke();
+    if(prev.sym){ ctx.strokeStyle=prev.sym; ctx.fillStyle=prev.sym; drawSym(ctx,prev.id||0,0,0); }
+    if(prev.town) drawTown(ctx,0,0);
+    ctx.restore();
+  }
+}
+function previewStyle(){
+  if(active.kind==="terrain") return {id:active.id, fill:TERR[active.id].fill+"55", sym:TERR[active.id].sym, id_:active.id};
+  if(active.kind==="town")    return {town:true};
+  return {fill:"rgba(255,255,255,0.12)"};
+}
+
+// ---- camera ops ----
+function clampZ(z){return Math.max(0.06,Math.min(10,z));}
+function zoomAt(clientX,clientY,factor){
+  const rect=cv.getBoundingClientRect();
+  const sx=clientX-rect.left, sy=clientY-rect.top;
+  const [wx,wy]=[(sx-cam.x)/cam.z,(sy-cam.y)/cam.z];
+  cam.z=clampZ(cam.z*factor);
+  cam.x=sx-wx*cam.z; cam.y=sy-wy*cam.z;
+  render();
+}
+function fitGrid(){
+  const w=cv.clientWidth-20, h=cv.clientHeight-20;
+  cam.z=clampZ(Math.min(w/GRID_W,h/GRID_H));
+  cam.x=cv.clientWidth/2-(GRID_W/2)*cam.z;
+  cam.y=cv.clientHeight/2-(GRID_H/2)*cam.z;
+  render();
+}
+
+// ---- painting ----
+function paintHex(c,r){
+  if(c<0||c>=COLS||r<0||r>=ROWS) return;
+  const i=idx(c,r);
+  if(active.kind==="erase"){ terrain[i]=0; towns[i]=0; }
+  else if(active.kind==="town"){ towns[i]=1; }
+  else { terrain[i]=active.id; }
+  dirty=true;
+}
+function paintLine(c0,r0,c1,r1){
+  const dc=c1-c0, dr=r1-r0, steps=Math.max(Math.abs(dc),Math.abs(dr));
+  if(steps===0){ paintHex(c1,r1); return; }
+  for(let s=0;s<=steps;s++){
+    paintHex(Math.round(c0+dc*s/steps), Math.round(r0+dr*s/steps));
+  }
+}
+
+// ---- pointer handling ----
+let mode=null, lastHex=null, panStart=null, space=false;
+stage.addEventListener("contextmenu",e=>e.preventDefault());
+
+stage.addEventListener("pointerdown",e=>{
+  stage.setPointerCapture(e.pointerId);
+  const pan = e.button===1 || e.button===2 || space;
+  if(pan){
+    mode="pan"; panStart={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y};
+    stage.classList.add("panning");
+  } else {
+    mode="paint";
+    const [wx,wy]=clientToWorld(e.clientX,e.clientY);
+    const [c,r]=worldToHex(wx,wy);
+    paintHex(c,r); lastHex={c,r};
+    scheduleSave(); render();
+  }
+});
+stage.addEventListener("pointermove",e=>{
+  const [wx,wy]=clientToWorld(e.clientX,e.clientY);
+  const [c,r]=worldToHex(wx,wy);
+  hover={c,r};
+  document.getElementById("curhex").textContent =
+    (c>=0&&c<COLS&&r>=0&&r<ROWS)? `(${c}, ${r})` : "—";
+  if(mode==="pan"){
+    cam.x=panStart.cx+(e.clientX-panStart.x);
+    cam.y=panStart.cy+(e.clientY-panStart.y);
+    render();
+  } else if(mode==="paint"){
+    if(lastHex) paintLine(lastHex.c,lastHex.r,c,r); else paintHex(c,r);
+    lastHex={c,r};
+    scheduleSave(); render();
+  } else {
+    render();
+  }
+});
+function endPointer(e){
+  if(mode==="paint") scheduleSave(true);
+  mode=null; lastHex=null; stage.classList.remove("panning");
+  try{stage.releasePointerCapture(e.pointerId);}catch(_){}
+  render();
+}
+stage.addEventListener("pointerup",endPointer);
+stage.addEventListener("pointercancel",endPointer);
+stage.addEventListener("pointerleave",()=>{hover={c:-1,r:-1};if(mode!=="paint")render();});
+
+stage.addEventListener("wheel",e=>{
+  e.preventDefault();
+  const f=e.deltaY<0?1.12:1/1.12;
+  zoomAt(e.clientX,e.clientY,f);
+},{passive:false});
+
+window.addEventListener("keydown",e=>{
+  if(e.code==="Space"){ space=true; stage.classList.add("panning"); }
+  if(e.key>="0"&&e.key<="9"){ const t=TOOLS.find(t=>t.key==+e.key); if(t) selectTool(t); }
+});
+window.addEventListener("keyup",e=>{
+  if(e.code==="Space"){ space=false; if(mode!=="pan") stage.classList.remove("panning"); }
+});
+
+// ---- palette / tools UI ----
+const pal=document.getElementById("palette");
+function toolLabel(t){ return t.kind==="terrain"?TERR[t.id].label : t.kind==="town"?"Town":"Erase"; }
+function buildPalette(){
+  pal.innerHTML="";
+  TOOLS.forEach(t=>{
+    const b=document.createElement("button");
+    b.className="tool";
+    const lbl=toolLabel(t);
+    let swStyle="", desc="";
+    if(t.kind==="terrain"){ swStyle=`background:${TERR[t.id].fill}`; desc=TERR[t.id].label; }
+    else if(t.kind==="town"){ swStyle=`background:linear-gradient(135deg,#ffd479,#caa23e)`; desc="settlement"; }
+    else { swStyle=`background:repeating-linear-gradient(45deg,#333,#333 3px,#444 3px,#444 6px)`; desc="clear"; }
+    b.innerHTML=`<span class="sw" style="${swStyle}"></span>
+      <span class="t"><span>${lbl}</span><small>${desc}</small></span>
+      <span class="k">${t.key}</span>`;
+    b.onclick=()=>selectTool(t);
+    b.dataset.key=t.key;
+    pal.appendChild(b);
+  });
+  reflectTool();
+}
+function selectTool(t){
+  if(t.kind==="terrain") active={kind:"terrain",id:t.id};
+  else active={kind:t.kind};
+  reflectTool(); render();
+}
+function reflectTool(){
+  const cur=active.kind==="terrain"?`terrain-${active.id}`:active.kind;
+  document.querySelectorAll(".tool").forEach(b=>{
+    const t=TOOLS.find(x=>x.key==b.dataset.key);
+    const on = (t.kind==="terrain"&&active.kind==="terrain"&&active.id===t.id)
+            || (t.kind!=="terrain"&&active.kind===t.kind);
+    b.classList.toggle("on",on);
+  });
+  const t=TOOLS.find(x=>{
+    if(x.kind!=="terrain") return active.kind===x.kind;
+    return active.kind==="terrain"&&active.id===x.id;
+  });
+  document.getElementById("curtool").textContent = t?toolLabel(t):"—";
+}
+
+// ---- background controls ----
+const bgfile=document.getElementById("bgfile");
+bgfile.addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  loadImage(f);
+});
+function loadImage(file){
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{ bgImg=img; bgScaleMul=1; bgOffX=0; bgOffY=0;
+    document.getElementById("bgscale").value=100; document.getElementById("bgx").value=0;
+    document.getElementById("bgy").value=0; document.getElementById("scv").textContent="100%";
+    document.getElementById("bgstatus").textContent=`${file.name} — ${img.width}×${img.height}`;
+    document.getElementById("bglabel").textContent="Replace image…";
+    dirty=true; render();
+  };
+  img.src=url;
+}
+document.getElementById("bgop").addEventListener("input",e=>{
+  bgOp=e.target.value/100; document.getElementById("opv").textContent=e.target.value+"%"; dirty=true; render();
+});
+document.getElementById("bgscale").addEventListener("input",e=>{
+  bgScaleMul=e.target.value/100; document.getElementById("scv").textContent=e.target.value+"%"; dirty=true; render();
+});
+document.getElementById("bgx").addEventListener("input",e=>{bgOffX=+e.target.value;dirty=true;render();});
+document.getElementById("bgy").addEventListener("input",e=>{bgOffY=+e.target.value;dirty=true;render();});
+document.getElementById("bgfit").onclick=()=>{bgScaleMul=1;bgOffX=0;bgOffY=0;
+  document.getElementById("bgscale").value=100;document.getElementById("bgx").value=0;
+  document.getElementById("bgy").value=0;document.getElementById("scv").textContent="100%";dirty=true;render();};
+document.getElementById("bgclear").onclick=()=>{bgImg=null;document.getElementById("bgstatus").textContent="No background loaded.";document.getElementById("bglabel").textContent="Upload map image…";dirty=true;render();};
+
+// drag-drop onto stage
+stage.addEventListener("dragover",e=>{e.preventDefault();stage.classList.add("drag");});
+stage.addEventListener("dragleave",()=>stage.classList.remove("drag"));
+stage.addEventListener("drop",e=>{
+  e.preventDefault(); stage.classList.remove("drag");
+  const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith("image")) loadImage(f);
+});
+
+// ---- view buttons ----
+document.getElementById("zin").onclick=()=>zoomAt(cv.getBoundingClientRect().left+cv.clientWidth/2,cv.getBoundingClientRect().top+cv.clientHeight/2,1.25);
+document.getElementById("zout").onclick=()=>zoomAt(cv.getBoundingClientRect().left+cv.clientWidth/2,cv.getBoundingClientRect().top+cv.clientHeight/2,1/1.25);
+document.getElementById("zfit").onclick=fitGrid;
+document.getElementById("z1").onclick=()=>{cam.z=1;cam.x=cv.clientWidth/2-(GRID_W/2);cam.y=cv.clientHeight/2-(GRID_H/2);render();};
+
+// ---- data: export / save / load / clear ----
+document.getElementById("export").onclick=()=>{
+  const tmp=document.createElement("canvas");
+  tmp.width=world.width; tmp.height=world.height;
+  const g=tmp.getContext("2d");
+  // draw without background for a clean hex map
+  const realBg=bgImg, realOp=bgOp; bgImg=null;
+  buildWorld.call.__onlyForExport(g);
+  bgImg=realBg;
+  const a=document.createElement("a"); a.download="hexmap.png"; a.href=tmp.toDataURL("image/png"); a.click();
+};
+// export helper using shared drawing
+function exportDraw(g){
+  // replicate buildWorld but on arbitrary ctx, no bg
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const [cx,cy]=center(c,r);
+    const t=terrain[idx(c,r)];
+    hexPath(g,cx,cy);
+    if(t){g.fillStyle=TERR[t].fill;g.fill();}
+    g.strokeStyle="rgba(0,0,0,0.4)";g.lineWidth=1;g.stroke();
+    if(t){g.strokeStyle=TERR[t].sym;g.fillStyle=TERR[t].sym;drawSym(g,t,cx,cy);}
+    if(towns[idx(c,r)]) drawTown(g,cx,cy);
+  }
+}
+// wire export properly
+document.getElementById("export").onclick=()=>{
+  const tmp=document.createElement("canvas");
+  tmp.width=Math.ceil(GRID_W); tmp.height=Math.ceil(GRID_H);
+  const g=tmp.getContext("2d");
+  exportDraw(g);
+  const a=document.createElement("a"); a.download="hexmap.png"; a.href=tmp.toDataURL("image/png"); a.click();
+};
+
+document.getElementById("save").onclick=()=>{
+  const data={v:1,cols:COLS,rows:ROWS,terrain:Array.from(terrain),towns:Array.from(towns)};
+  const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
+  const a=document.createElement("a"); a.download="hexmap.json"; a.href=URL.createObjectURL(blob); a.click();
+};
+document.getElementById("loadfile").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(rd.result);
+      if(d.cols!==COLS||d.rows!==ROWS){alert("JSON dimensions don't match 100×100.");return;}
+      terrain.set(d.terrain); towns.set(d.towns);
+      dirty=true; render(); scheduleSave(true);
+    }catch(err){alert("Invalid JSON: "+err.message);}
+  };
+  rd.readAsText(f);
+});
+document.getElementById("clear").onclick=()=>{
+  if(!confirm("Clear all hexes?")) return;
+  terrain.fill(0); towns.fill(0); dirty=true; render(); scheduleSave(true);
+};
+
+// ---- autosave ----
+let saveTimer=null;
+function scheduleSave(force){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer=setTimeout(doSave, force?0:500);
+}
+const STORE="hexmapper.v1";
+function doSave(){
+  try{
+    localStorage.setItem(STORE,JSON.stringify({
+      terrain:Array.from(terrain),towns:Array.from(towns),cam:cam
+    }));
+  }catch(_){}
+}
+function loadSaved(){
+  try{
+    const s=localStorage.getItem(STORE); if(!s) return;
+    const d=JSON.parse(s);
+    if(d.terrain) terrain.set(d.terrain);
+    if(d.towns) towns.set(d.towns);
+    if(d.cam){ cam.x=d.cam.x; cam.y=d.cam.y; cam.z=d.cam.z; }
+  }catch(_){}
+}
+
+// zoom display
+setInterval(()=>{document.getElementById("curzoom").textContent=Math.round(cam.z*100)+"%";},200);
+
+// ---- init ----
+buildPalette();
+loadSaved();
+resize();
+fitGrid();
+render();
+</script>
+</body>
+</html>
