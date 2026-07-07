@@ -1,9 +1,16 @@
+const bgTmp=document.createElement("canvas");
 function drawBgLayer(g){
   if(!bgImg) return;
   const fit=Math.min(GRID_W/bgImg.width,GRID_H/bgImg.height)*bgScaleMul;
-  const dw=bgImg.width*fit, dh=bgImg.height*fit;
+  const dw=Math.max(1,Math.round(bgImg.width*fit)), dh=Math.max(1,Math.round(bgImg.height*fit));
   const dx=(GRID_W-dw)/2+bgOffX, dy=(GRID_H-dh)/2+bgOffY;
-  g.globalAlpha=bgOp; g.drawImage(bgImg,dx,dy,dw,dh); g.globalAlpha=1;
+  // composite backdrop colour behind the image's own alpha, then apply opacity
+  bgTmp.width=dw; bgTmp.height=dh;
+  const tg=bgTmp.getContext("2d");
+  tg.clearRect(0,0,dw,dh);
+  tg.fillStyle=bgColor; tg.fillRect(0,0,dw,dh);
+  tg.drawImage(bgImg,0,0,dw,dh);
+  g.globalAlpha=bgOp; g.drawImage(bgTmp,dx,dy); g.globalAlpha=1;
 }
 function drawTilesLayer(g){
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }

@@ -8,6 +8,7 @@ function loadImage(file){
   img.src=url;
 }
 document.getElementById("bgop").addEventListener("input",e=>{ bgOp=e.target.value/100; document.getElementById("opv").textContent=e.target.value+"%"; dirty=true; render(); });
+document.getElementById("bgcol").addEventListener("input",e=>{ bgColor=e.target.value; dirty=true; render(); });
 document.getElementById("bgscale").addEventListener("input",e=>{ bgScaleMul=e.target.value/100; document.getElementById("scv").textContent=e.target.value+"%"; dirty=true; render(); });
 document.getElementById("bgx").addEventListener("input",e=>{ bgOffX=+e.target.value; dirty=true; render(); });
 document.getElementById("bgy").addEventListener("input",e=>{ bgOffY=+e.target.value; dirty=true; render(); });
