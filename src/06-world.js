@@ -64,12 +64,12 @@ function drawPreview(g){
   }
   else if(active.kind==="river"){
     const col=active.type===1?WATER_RIVER:LAVA_RIVER;
-    g.strokeStyle=col; g.lineWidth=S*0.18; g.lineCap="round";
-    previewEdges(g, rivers, active.type);
+    g.strokeStyle=col; g.lineWidth=S*0.18; g.lineCap="round"; g.lineJoin="round";
+    drawSegments(g,0,0,overlayMids(rivers,hover.c,hover.r,active.type));
     g.fillStyle=col; g.beginPath(); g.arc(0,0,S*0.12,0,7); g.fill();
   } else if(active.kind==="road"){
-    g.strokeStyle=ROAD_COLOR; g.lineWidth=S*0.13; g.lineCap="butt"; g.setLineDash([S*0.3,S*0.2]);
-    previewEdges(g, roads, 1); g.setLineDash([]);
+    g.strokeStyle=ROAD_COLOR; g.lineWidth=S*0.13; g.lineCap="butt"; g.lineJoin="round"; g.setLineDash([S*0.3,S*0.2]);
+    drawSegments(g,0,0,overlayMids(roads,hover.c,hover.r,1)); g.setLineDash([]);
   } else if(active.kind==="entity"){ drawEntity(g,active.id,0,0,hover.c,hover.r); }
   g.globalAlpha=1;
 }
