@@ -25,7 +25,7 @@
 <style>
   :root{
     --bg:#1b1d22; --panel:#252830; --panel2:#2e323c; --line:#3a3f4b;
-    --tx:#e7e9ee; --dim:#9aa0ad; --acc:#6ea8fe; --acc2:#84d6a1;
+    --tx:#e7e9ee; --dim:#9aa0ad; --acc:#6ea8fe; --acc2:#84d6a1; --warn:#e27075;
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
@@ -37,17 +37,16 @@
   #stage{flex:1;position:relative;overflow:hidden;cursor:crosshair;background:#15161a}
   #stage.panning{cursor:grab}
   #stage.panning:active{cursor:grabbing}
+  #stage.textmode{cursor:text}
   canvas{position:absolute;inset:0;display:block;touch-action:none}
   h3{margin:14px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
-  .gh{font-size:10px;color:var(--dim);margin:6px 0 3px;text-transform:uppercase;letter-spacing:.06em}
-  .tools{display:grid;grid-template-columns:1fr 1fr;gap:5px}
-  .tool{display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 6px;cursor:pointer;text-align:left;color:var(--tx)}
+  .tools{display:grid;grid-template-columns:1fr;gap:4px}
+  .tool{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;cursor:pointer;text-align:left;color:var(--tx);width:100%}
   .tool:hover{border-color:var(--acc)}
   .tool.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset;background:#2c3243}
   .tool .sw{width:15px;height:15px;border-radius:4px;flex:0 0 15px;border:1px solid rgba(0,0,0,.4)}
-  .tool .t{display:flex;flex-direction:column;line-height:1.1;min-width:0}
-  .tool .t span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tool .k{margin-left:auto;font-size:9px;color:var(--dim);background:#1b1d22;border-radius:3px;padding:1px 4px;flex:0 0 auto}
+  .tool .lab{flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tool .k{font-size:9px;color:var(--dim);background:#1b1d22;border-radius:3px;padding:1px 4px;flex:0 0 auto}
   label{display:block;margin:8px 0 3px;color:var(--dim);font-size:11px}
   input[type=range]{width:100%}
   input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit}
@@ -55,7 +54,9 @@
   .row{display:flex;gap:6px;flex-wrap:wrap}
   button.act{background:var(--panel2);border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:12px;flex:1}
   button.act:hover{border-color:var(--acc)}
-  button.act.danger:hover{border-color:#e27075}
+  button.act.danger{color:#f4b3b6}
+  button.act.danger:hover{border-color:var(--warn)}
+  button.act:disabled{opacity:.45;cursor:not-allowed}
   input[type=file]{display:none}
   .filebtn{display:inline-block;background:var(--panel2);border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;width:100%;text-align:center}
   .filebtn:hover{border-color:var(--acc)}
@@ -70,11 +71,17 @@
 <div id="side">
   <div id="palette"></div>
 
-  <h3>Text label</h3>
-  <input id="txt" type="text" placeholder="Label text…" autocomplete="off">
-  <label>Font size <span id="tsv">14</span></label>
-  <input id="txtsize" type="range" min="6" max="48" value="14">
-  <div class="hint">Select the Text tool, then click the map to place. Click an existing label to delete it.</div>
+  <div id="textpanel" style="display:none">
+    <h3>Text — selected</h3>
+    <div class="hint" id="texthint" style="margin:0 0 6px">Click the map to add a label; click a label to edit it.</div>
+    <label>Text</label>
+    <input id="txt" type="text" placeholder="Label text…" autocomplete="off">
+    <label>Font size <span id="tsv">14</span></label>
+    <input id="txtsize" type="range" min="6" max="48" value="14">
+    <div class="row" style="margin-top:8px">
+      <button class="act danger" id="txtdelete" disabled>Delete label</button>
+    </div>
+  </div>
 
   <h3>Background image</h3>
   <label class="filebtn" for="bgfile" id="bglabel">Upload map image…</label>
@@ -118,7 +125,8 @@
     <b>Left-drag</b> paint &nbsp;·&nbsp; <b>Right/Middle-drag</b> pan<br>
     <b>Wheel</b> zoom to cursor &nbsp;·&nbsp; hold <code>Space</code> to pan<br>
     Keys: <code>1</code>–<code>9</code> terrain · <code>0</code> erase<br>
-    <code>r</code>/<code>l</code> water/lava river · <code>t</code> town <code>c</code> city <code>d</code> dungeon <code>g</code> danger <code>u</code> unknown · <code>x</code> text
+    <code>r</code>/<code>l</code> water/lava river · <code>t</code> town <code>c</code> city <code>d</code> dungeon <code>g</code> danger <code>u</code> unknown · <code>x</code> text<br>
+    In Text mode: click to add/select · drag to move · <code>Del</code> delete · <code>Esc</code> deselect
   </div>
   <div class="hint" style="margin-top:8px;color:var(--acc2)">Autosaves to this browser.</div>
 </div>
@@ -164,22 +172,12 @@ const TERR={
  13:{label:"Marsh",         fill:"#bca771", sym:"#54401c"},
  14:{label:"Fog / unknown", fill:"#6f6f6f", sym:"#3f3f3f"},
 };
-const GROUPS=[
- {name:"Vegetation", items:[1,2]},
- {name:"Grassland",   items:[3,4]},
- {name:"Dryland",     items:[5,6]},
- {name:"Mountains",   items:[7,8]},
- {name:"Water",       items:[9,10]},
- {name:"Lava",        items:[11,12]},
- {name:"Wet / hidden",items:[13,14]},
-];
-// rivers carry a type: 1 water, 2 lava — same edge rules, different colour
+const TERRAIN_TOOLS=Object.keys(TERR).map(k=>{const id=+k; return {kind:"terrain",id,label:TERR[id].label,sw:TERR[id].fill,key:id<=9?String(id):""};});
 const WATER_RIVER="#2f7ab8", LAVA_RIVER="#ef6a2a";
 const RIVER_TOOLS=[
  {kind:"river",type:1,label:"Water river",key:"r",sw:WATER_RIVER},
  {kind:"river",type:2,label:"Lava river",key:"l",sw:LAVA_RIVER},
 ];
-// points of interest
 const ENT_NAME={1:"Town",2:"City",3:"Unknown",4:"Danger",5:"Dungeon"};
 const POI_TOOLS=[
  {kind:"entity",id:1,label:"Town",    key:"t",sw:"#ffd479"},
@@ -197,7 +195,8 @@ let active={kind:"terrain",id:1};
 const terrain=new Uint8Array(ROWS*COLS);
 const rivers =new Uint8Array(ROWS*COLS); // 0 none, 1 water, 2 lava
 const entity =new Uint8Array(ROWS*COLS); // 0 none, 1 town, 2 city, 3 unknown, 4 danger, 5 dungeon
-let texts=[]; // {x,y,s,size} in world coords
+let texts=[]; // {x,y,s,size} world coords
+let selText=-1;        // index of selected text label
 
 // ---- canvas / camera ----
 const cv=document.getElementById("cv");
@@ -209,7 +208,14 @@ const wctx=world.getContext("2d");
 let cam={x:0,y:0,z:1};
 let bgImg=null,bgOp=0.45,bgScaleMul=1,bgOffX=0,bgOffY=0;
 let dirty=true, hover={c:-1,r:-1};
-let labelText="", fontSize=14;
+let labelText="Label", fontSize=14;
+
+const txtEl=document.getElementById("txt");
+const tsvEl=document.getElementById("tsv");
+const tsizeEl=document.getElementById("txtsize");
+const tdelEl=document.getElementById("txtdelete");
+const thintEl=document.getElementById("texthint");
+const tpanelEl=document.getElementById("textpanel");
 
 function resize(){
   const dpr=Math.min(window.devicePixelRatio||1,2);
@@ -221,32 +227,25 @@ function resize(){
 }
 window.addEventListener("resize",resize);
 
-// ---- hex math (pointy-top, odd-r offset) ----
+// ---- hex math ----
 function center(c,r){ return [PAD+W/2+W*c+(r&1)*(W/2), PAD+S+1.5*S*r]; }
 const VERTS=[[0,-S],[W/2,-S/2],[W/2,S/2],[0,S],[-W/2,S/2],[-W/2,-S/2]];
-const AXIAL_DIRS=[[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]]; // E,NE,NW,W,SW,SE
+const AXIAL_DIRS=[[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
 const EDGE_MID =[[W/2,0],[W/4,-3*S/4],[-W/4,-3*S/4],[-W/2,0],[-W/4,3*S/4],[W/4,3*S/4]];
 const EDGEDIR=[1,0,5,4,3,2];
 function neighbors(c,r){
   const q0=c-((r-(r&1))>>1), r0=r, out=[];
-  for(const [dq,dr] of AXIAL_DIRS){
-    const q=q0+dq, rr=r0+dr;
-    out.push([q+((rr-(rr&1))>>1), rr]);
-  }
+  for(const [dq,dr] of AXIAL_DIRS){ const q=q0+dq, rr=r0+dr; out.push([q+((rr-(rr&1))>>1), rr]); }
   return out;
 }
 function hexPath(g,cx,cy){
-  g.beginPath();
-  g.moveTo(cx,cy-S);
+  g.beginPath(); g.moveTo(cx,cy-S);
   g.lineTo(cx+W/2,cy-S/2); g.lineTo(cx+W/2,cy+S/2);
   g.lineTo(cx,cy+S);
   g.lineTo(cx-W/2,cy+S/2); g.lineTo(cx-W/2,cy-S/2);
   g.closePath();
 }
-function clientToWorld(x,y){
-  const rc=cv.getBoundingClientRect();
-  return [(x-rc.left-cam.x)/cam.z,(y-rc.top-cam.y)/cam.z];
-}
+function clientToWorld(x,y){ const rc=cv.getBoundingClientRect(); return [(x-rc.left-cam.x)/cam.z,(y-rc.top-cam.y)/cam.z]; }
 function worldToHex(x,y){
   const px=x-(PAD+W/2), py=y-(PAD+S);
   const q=(Math.sqrt(3)/3*px-1/3*py)/S, r=(2/3*py)/S, s=-q-r;
@@ -266,10 +265,7 @@ function outlineHex(g,c,r,keyFn){
     const [nc,nr]=ns[EDGEDIR[i]];
     let same=false;
     if(inB(nc,nr)&&self===keyFn(nc,nr)) same=true;
-    if(!same){
-      const a=VERTS[i],b=VERTS[(i+1)%6];
-      g.beginPath(); g.moveTo(cx+a[0],cy+a[1]); g.lineTo(cx+b[0],cy+b[1]); g.stroke();
-    }
+    if(!same){ const a=VERTS[i],b=VERTS[(i+1)%6]; g.beginPath(); g.moveTo(cx+a[0],cy+a[1]); g.lineTo(cx+b[0],cy+b[1]); g.stroke(); }
   }
 }
 
@@ -280,8 +276,7 @@ function tree(g,x,y,sz,col){
   g.fillRect(x-sz*0.06,y+sz*0.16,sz*0.12,sz*0.22);
 }
 function waveH(g,cx,cy,scale){
-  g.lineWidth=S*0.12*scale;
-  g.beginPath();
+  g.lineWidth=S*0.12*scale; g.beginPath();
   const x0=cx-S*0.42, x1=cx+S*0.42, steps=4, dx=(x1-x0)/steps;
   g.moveTo(x0,cy);
   for(let i=1;i<=steps;i++){ const mx=x0+dx*(i-0.5),xx=x0+dx*i; g.quadraticCurveTo(mx,cy+(i%2?S*0.1:-S*0.1),xx,cy); }
@@ -292,17 +287,13 @@ function drawTerrain(g,id,cx,cy){
   switch(id){
     case 1: tree(g,cx,cy,S*0.95,sym); break;
     case 2: tree(g,cx-S*0.22,cy+S*0.06,S*0.7,sym); tree(g,cx+S*0.22,cy+S*0.06,S*0.7,sym); tree(g,cx,cy-S*0.18,S*0.82,sym); break;
-    case 3: g.lineWidth=S*0.07;
-      for(const [tx,ty] of [[-0.25,0.12],[0.05,-0.06],[0.25,0.16]]){ g.beginPath(); g.moveTo(cx+tx*S,cy+ty*S); g.lineTo(cx+tx*S,cy+(ty-0.13)*S); g.stroke(); }
-      break;
-    case 4: g.lineWidth=S*0.13;
-      g.beginPath();
+    case 3: g.lineWidth=S*0.07; for(const [tx,ty] of [[-0.25,0.12],[0.05,-0.06],[0.25,0.16]]){ g.beginPath(); g.moveTo(cx+tx*S,cy+ty*S); g.lineTo(cx+tx*S,cy+(ty-0.13)*S); g.stroke(); } break;
+    case 4: g.lineWidth=S*0.13; g.beginPath();
       g.moveTo(cx-S*0.42,cy+S*0.28); g.lineTo(cx-S*0.2,cy-S*0.05); g.lineTo(cx+S*0.02,cy+S*0.28);
       g.moveTo(cx-S*0.02,cy+S*0.28); g.lineTo(cx+S*0.2,cy-S*0.05); g.lineTo(cx+S*0.42,cy+S*0.28);
       g.stroke(); break;
     case 5: for(const [tx,ty] of [[-0.2,0.1],[0.1,-0.06],[0.22,0.2],[-0.08,-0.16]]){ g.beginPath(); g.arc(cx+tx*S,cy+ty*S,S*0.045,0,7); g.fill(); } break;
-    case 6: g.lineWidth=S*0.14;
-      g.beginPath();
+    case 6: g.lineWidth=S*0.14; g.beginPath();
       g.arc(cx-S*0.28,cy+S*0.12,S*0.3,Math.PI*1.05,Math.PI*1.95);
       g.arc(cx+S*0.28,cy+S*0.12,S*0.3,Math.PI*1.05,Math.PI*1.95);
       g.stroke(); break;
@@ -314,13 +305,10 @@ function drawTerrain(g,id,cx,cy){
     case 10: waveH(g,cx,cy,1); waveH(g,cx,cy-S*0.24,0.8); break;
     case 11: waveH(g,cx,cy,1); break;
     case 12: waveH(g,cx,cy,1); waveH(g,cx,cy-S*0.24,0.8); break;
-    case 13: g.lineWidth=S*0.1; waveH(g,cx,cy+S*0.18,0.9);
-      g.lineWidth=S*0.06;
+    case 13: g.lineWidth=S*0.1; waveH(g,cx,cy+S*0.18,0.9); g.lineWidth=S*0.06;
       for(const tx of [-0.2,0.05,0.25]){ const ty=-0.05; g.beginPath(); g.moveTo(cx+tx*S,cy+ty*S); g.lineTo(cx+tx*S,cy+ty*S-S*0.22); g.stroke(); }
       break;
-    case 14: g.lineWidth=S*0.07;
-      for(let i=-2;i<=2;i++){ g.beginPath(); g.moveTo(cx-S*0.4,cy+i*S*0.18); g.lineTo(cx+S*0.4,cy+i*S*0.18-S*0.16); g.stroke(); }
-      break;
+    case 14: g.lineWidth=S*0.07; for(let i=-2;i<=2;i++){ g.beginPath(); g.moveTo(cx-S*0.4,cy+i*S*0.18); g.lineTo(cx+S*0.4,cy+i*S*0.18-S*0.16); g.stroke(); } break;
   }
 }
 function house(g,cx,cy,sz){
@@ -345,8 +333,7 @@ function drawSkull(g,cx,cy){
   g.restore();
 }
 function drawCave(g,cx,cy){
-  g.save();
-  g.fillStyle="#5b524a";
+  g.save(); g.fillStyle="#5b524a";
   g.beginPath(); g.moveTo(cx-S*0.34,cy+S*0.28); g.lineTo(cx-S*0.34,cy-S*0.1);
   g.arc(cx,cy-S*0.1,S*0.34,Math.PI,0,false); g.lineTo(cx+S*0.34,cy+S*0.28); g.closePath(); g.fill();
   g.fillStyle="#0c0c0c";
@@ -369,25 +356,29 @@ function drawEntity(g,type,cx,cy){
 function roundRect(g,x,y,w,h,r){
   g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
 }
+function textMetrics(t){
+  wctx.save(); wctx.textAlign="center"; wctx.textBaseline="middle"; wctx.font=`${t.size}px ui-sans-serif,system-ui,sans-serif`;
+  const w=wctx.measureText(t.s).width, pad=t.size*0.25, h=t.size*1.35;
+  wctx.restore();
+  return {w:w+2*pad,h,pad};
+}
 function drawTexts(g){
   g.save(); g.textAlign="center"; g.textBaseline="middle";
   for(const t of texts){
     g.font=`${t.size}px ui-sans-serif,system-ui,sans-serif`;
-    const w=g.measureText(t.s).width, pad=t.size*0.25, h=t.size*1.35;
-    g.fillStyle="#fff"; roundRect(g,t.x-w/2-pad,t.y-h/2,w+2*pad,h,t.size*0.2); g.fill();
+    const m=textMetrics(t);
+    g.fillStyle="#fff"; roundRect(g,t.x-m.w/2,t.y-m.h/2,m.w,m.h,t.size*0.2); g.fill();
     g.strokeStyle="rgba(0,0,0,0.18)"; g.lineWidth=1; g.stroke();
     g.fillStyle="#000"; g.fillText(t.s,t.x,t.y);
   }
   g.restore();
 }
 function hitText(wx,wy){
-  wctx.save(); wctx.textAlign="center"; wctx.textBaseline="middle";
   for(let i=texts.length-1;i>=0;i--){
-    const t=texts[i]; wctx.font=`${t.size}px ui-sans-serif,system-ui,sans-serif`;
-    const w=wctx.measureText(t.s).width, pad=t.size*0.25, h=t.size*1.35;
-    if(wx>=t.x-w/2-pad&&wx<=t.x+w/2+pad&&wy>=t.y-h/2&&wy<=t.y+h/2){ wctx.restore(); return i; }
+    const t=texts[i], m=textMetrics(t);
+    if(wx>=t.x-m.w/2&&wx<=t.x+m.w/2&&wy>=t.y-m.h/2&&wy<=t.y+m.h/2) return i;
   }
-  wctx.restore(); return -1;
+  return -1;
 }
 
 // ---- build world canvas ----
@@ -399,38 +390,23 @@ function buildWorld(includeBg){
     const dx=(GRID_W-dw)/2+bgOffX, dy=(GRID_H-dh)/2+bgOffY;
     g.globalAlpha=bgOp; g.drawImage(bgImg,dx,dy,dw,dh); g.globalAlpha=1;
   }
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    const t=terrain[idx(c,r)]; if(!t) continue;
-    const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill();
-  }
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }
   g.strokeStyle="rgba(0,0,0,0.32)"; g.lineWidth=1;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    const t=terrain[idx(c,r)]; if(!t) continue;
-    const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy);
-  }
-  // city overlay (merges)
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    if(entity[idx(c,r)]!==2) continue;
-    const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle="#6f6f78"; g.fill();
-  }
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t) continue; const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); }
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ if(entity[idx(c,r)]!==2) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle="#6f6f78"; g.fill(); }
   g.strokeStyle="rgba(0,0,0,0.5)"; g.lineWidth=1.2;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2) outlineHex(g,c,r,cKey);
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2){ const [cx,cy]=center(c,r); cityTexture(g,cx,cy); }
-  // rivers (water + lava): connect centre -> shared-edge midpoint, same type only
   g.save(); g.lineCap="round"; g.lineJoin="round"; g.lineWidth=S*0.18;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const T=rivers[idx(c,r)]; if(!T) continue;
-    g.strokeStyle = T===1?WATER_RIVER:LAVA_RIVER;
+    g.strokeStyle=T===1?WATER_RIVER:LAVA_RIVER;
     const [cx,cy]=center(c,r), ns=neighbors(c,r);
     for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(!inB(nc,nr)||rivers[idx(nc,nr)]!==T) continue; const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); }
   }
   g.restore();
-  // other PoIs
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    const e=entity[idx(c,r)]; if(e===0||e===2) continue;
-    const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy);
-  }
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const e=entity[idx(c,r)]; if(e===0||e===2) continue; const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy); }
   drawTexts(g);
   g.strokeStyle="rgba(255,255,255,0.15)"; g.lineWidth=2; g.strokeRect(0,0,GRID_W,GRID_H);
 }
@@ -443,7 +419,15 @@ function render(){
   ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
   ctx.imageSmoothingEnabled=true;
   ctx.drawImage(world,cam.x,cam.y,world.width*cam.z,world.height*cam.z);
-  if(hover.c>=0&&hover.r>=0){
+  // text selection highlight
+  if(selText>=0&&texts[selText]){
+    const t=texts[selText], m=textMetrics(t);
+    const sx=t.x*cam.z+cam.x, sy=t.y*cam.z+cam.y;
+    ctx.save(); ctx.strokeStyle="#ffe14d"; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.strokeRect(sx-m.w/2*cam.z-3, sy-m.h/2*cam.z-3, m.w*cam.z+6, m.h*cam.z+6);
+    ctx.restore();
+  }
+  if(hover.c>=0&&hover.r>=0&&active.kind!=="text"){
     const [cx,cy]=center(hover.c,hover.r);
     const sx=cx*cam.z+cam.x, sy=cy*cam.z+cam.y;
     ctx.save(); ctx.translate(sx,sy); ctx.scale(cam.z,cam.z);
@@ -454,24 +438,14 @@ function render(){
 }
 function drawPreview(g){
   g.globalAlpha=0.5;
-  if(active.kind==="terrain"){
-    const t=active.id; hexPath(g,0,0); g.fillStyle=TERR[t].fill; g.fill(); drawTerrain(g,t,0,0);
-  } else if(active.kind==="river"){
+  if(active.kind==="terrain"){ const t=active.id; hexPath(g,0,0); g.fillStyle=TERR[t].fill; g.fill(); drawTerrain(g,t,0,0); }
+  else if(active.kind==="river"){
     const col=active.type===1?WATER_RIVER:LAVA_RIVER;
     g.strokeStyle=col; g.lineWidth=S*0.18; g.lineCap="round";
     const ns=neighbors(hover.c,hover.r);
     for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(inB(nc,nr)&&rivers[idx(nc,nr)]===active.type){ const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(0,0); g.lineTo(mx,my); g.stroke(); } }
     g.fillStyle=col; g.beginPath(); g.arc(0,0,S*0.12,0,7); g.fill();
-  } else if(active.kind==="entity"){
-    if(active.id===2){ hexPath(g,0,0); g.fillStyle="#6f6f78"; g.fill(); }
-    drawEntity(g,active.id,0,0);
-  } else if(active.kind==="text"&&labelText.trim()){
-    g.font=`${fontSize}px ui-sans-serif,system-ui,sans-serif`;
-    g.textAlign="center"; g.textBaseline="middle";
-    const w=g.measureText(labelText).width, pad=fontSize*0.25, h=fontSize*1.35;
-    g.fillStyle="rgba(255,255,255,0.7)"; roundRect(g,-w/2-pad,-h/2,w+2*pad,h,fontSize*0.2); g.fill();
-    g.fillStyle="#000"; g.fillText(labelText,0,0);
-  }
+  } else if(active.kind==="entity"){ if(active.id===2){ hexPath(g,0,0); g.fillStyle="#6f6f78"; g.fill(); } drawEntity(g,active.id,0,0); }
   g.globalAlpha=1;
 }
 
@@ -494,10 +468,8 @@ function paintHex(c,r){
   if(!inB(c,r)) return;
   const i=idx(c,r);
   switch(active.kind){
-    case "erase":
-      terrain[i]=0; rivers[i]=0; entity[i]=0;
-      texts=texts.filter(t=>{ const [tc,tr]=worldToHex(t.x,t.y); return !(tc===c&&tr===r); });
-      break;
+    case "erase": terrain[i]=0; rivers[i]=0; entity[i]=0;
+      texts=texts.filter(t=>{ const [tc,tr]=worldToHex(t.x,t.y); return !(tc===c&&tr===r); }); break;
     case "terrain": terrain[i]=active.id; break;
     case "river":   rivers[i]=strokeVal; break;
     case "entity":  entity[i]=active.id; break;
@@ -511,20 +483,19 @@ function paintLine(c0,r0,c1,r1){
 }
 
 // ---- pointer ----
-let mode=null,lastHex=null,panStart=null,space=false;
+let mode=null,lastHex=null,panStart=null,space=false,dragOff=null;
 stage.addEventListener("contextmenu",e=>e.preventDefault());
 stage.addEventListener("pointerdown",e=>{
+  stage.setPointerCapture(e.pointerId);
+  if(e.button===1||e.button===2||space){ mode="pan"; panStart={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y}; stage.classList.add("panning"); return; }
   if(active.kind==="text"){
     const [wx,wy]=clientToWorld(e.clientX,e.clientY);
     const hi=hitText(wx,wy);
-    if(hi>=0) texts.splice(hi,1);
-    else if(labelText.trim()) texts.push({x:wx,y:wy,s:labelText,size:fontSize});
-    dirty=true; scheduleSave(); render();
+    if(hi>=0){ selText=hi; dragOff={x:wx-texts[hi].x,y:wy-texts[hi].y}; }
+    else { texts.push({x:wx,y:wy,s:labelText,size:fontSize}); selText=texts.length-1; dragOff={x:0,y:0}; focusText(); }
+    updateTextPanel(); dirty=true; scheduleSave(); render();
+    mode="textdrag";
     return;
-  }
-  stage.setPointerCapture(e.pointerId);
-  if(e.button===1||e.button===2||space){
-    mode="pan"; panStart={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y}; stage.classList.add("panning"); return;
   }
   mode="paint";
   const [wx,wy]=clientToWorld(e.clientX,e.clientY);
@@ -536,24 +507,27 @@ stage.addEventListener("pointermove",e=>{
   const [wx,wy]=clientToWorld(e.clientX,e.clientY);
   const [c,r]=worldToHex(wx,wy); hover={c,r};
   document.getElementById("curhex").textContent=inB(c,r)?`(${c}, ${r})`:"—";
+  if(active.kind==="text"){ stage.classList.toggle("textmode",hitText(wx,wy)>=0||mode==="textdrag"); }
   if(mode==="pan"){ cam.x=panStart.cx+(e.clientX-panStart.x); cam.y=panStart.cy+(e.clientY-panStart.y); render(); }
+  else if(mode==="textdrag"){ if(selText>=0){ texts[selText].x=wx-dragOff.x; texts[selText].y=wy-dragOff.y; dirty=true; render(); } }
   else if(mode==="paint"){ if(lastHex) paintLine(lastHex.c,lastHex.r,c,r); else paintHex(c,r); lastHex={c,r}; scheduleSave(); render(); }
   else render();
 });
-function endPtr(e){ if(mode==="paint") scheduleSave(true); mode=null; lastHex=null; stage.classList.remove("panning"); try{stage.releasePointerCapture(e.pointerId);}catch(_){} render(); }
+function endPtr(e){ if(mode==="paint"||mode==="textdrag") scheduleSave(true); mode=null; lastHex=null; dragOff=null; stage.classList.remove("panning"); stage.classList.remove("textmode"); try{stage.releasePointerCapture(e.pointerId);}catch(_){} render(); }
 stage.addEventListener("pointerup",endPtr);
 stage.addEventListener("pointercancel",endPtr);
-stage.addEventListener("pointerleave",()=>{ hover={c:-1,r:-1}; if(mode!=="paint") render(); });
+stage.addEventListener("pointerleave",()=>{ hover={c:-1,r:-1}; if(mode!=="paint"&&mode!=="textdrag") render(); });
 stage.addEventListener("wheel",e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY,e.deltaY<0?1.12:1/1.12); },{passive:false});
 
 window.addEventListener("keydown",e=>{
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
   if(e.code==="Space"){ space=true; stage.classList.add("panning"); return; }
+  if(e.code==="Escape"){ if(selText>=0){ selText=-1; updateTextPanel(); render(); } return; }
+  if(e.code==="Delete"||e.code==="Backspace"){ if(selText>=0){ texts.splice(selText,1); selText=-1; updateTextPanel(); scheduleSave(true); render(); } return; }
   const k=e.key.toLowerCase();
   if(k>="1"&&k<="9"){ const id=+k; if(TERR[id]) selectTool({kind:"terrain",id}); return; }
   if(k==="0"){ selectTool({kind:"erase"}); return; }
-  const pool=[...RIVER_TOOLS,...POI_TOOLS,TEXT_TOOL];
-  const d=pool.find(o=>o.key===k);
+  const d=[...RIVER_TOOLS,...POI_TOOLS,TEXT_TOOL].find(o=>o.key===k);
   if(d) selectTool(d);
 });
 window.addEventListener("keyup",e=>{ if(e.code==="Space"){ space=false; if(mode!=="pan") stage.classList.remove("panning"); } });
@@ -565,7 +539,8 @@ function selectTool(d){
   else if(d.kind==="river") active={kind:"river",type:d.type};
   else if(d.kind==="entity") active={kind:"entity",id:d.id};
   else active={kind:d.kind};
-  reflectTool(); render();
+  if(active.kind!=="text") selText=-1;
+  syncTextPanel(); reflectTool(); render();
 }
 function toolName(a){
   if(a.kind==="terrain") return TERR[a.id].label;
@@ -579,7 +554,7 @@ function matchActive(d){
   if(d.kind==="terrain") return a.kind==="terrain"&&a.id===d.id;
   if(d.kind==="river")   return a.kind==="river"&&a.type===d.type;
   if(d.kind==="entity")  return a.kind==="entity"&&a.id===d.id;
-  return a.kind===d.kind; // text / erase
+  return a.kind===d.kind;
 }
 function reflectTool(){
   document.querySelectorAll(".tool").forEach(b=>{ const d=JSON.parse(b.dataset.d); b.classList.toggle("on",matchActive(d)); });
@@ -588,34 +563,41 @@ function reflectTool(){
 function btn(d){
   const b=document.createElement("button");
   b.className="tool"; b.dataset.d=JSON.stringify(d);
-  b.innerHTML=`<span class="sw" style="background:${d.sw}"></span><span class="t"><span>${d.label}</span></span>${d.key?`<span class="k">${d.key}</span>`:""}`;
+  b.innerHTML=`<span class="sw" style="background:${d.sw}"></span><span class="lab">${d.label}</span>${d.key?`<span class="k">${d.key}</span>`:""}`;
   b.onclick=()=>selectTool(d);
   return b;
 }
-function grp(name,tools,cols){
-  const w=document.createElement("div");
-  if(name){ const h=document.createElement("div"); h.className="gh"; h.textContent=name; w.appendChild(h); }
-  const gw=document.createElement("div"); gw.className="tools";
-  tools.forEach(d=> gw.appendChild(btn(d)));
-  w.appendChild(gw); palEl.appendChild(w);
-}
 function h3(text){ const h=document.createElement("h3"); h.textContent=text; palEl.appendChild(h); }
+function list(items){ const gw=document.createElement("div"); gw.className="tools"; items.forEach(d=>gw.appendChild(btn(d))); palEl.appendChild(gw); }
 function buildPalette(){
   palEl.innerHTML="";
-  h3("Terrain");
-  for(const g of GROUPS){
-    const w=document.createElement("div");
-    const h=document.createElement("div"); h.className="gh"; h.textContent=g.name; w.appendChild(h);
-    const gw=document.createElement("div"); gw.className="tools";
-    g.items.forEach(id=> gw.appendChild(btn({kind:"terrain",id,label:TERR[id].label,sw:TERR[id].fill,key:id<=9?String(id):""})));
-    w.appendChild(gw); palEl.appendChild(w);
-  }
-  h3("Rivers"); grp(null,RIVER_TOOLS);
-  h3("Points of interest"); grp(null,POI_TOOLS);
-  h3("Text"); grp(null,[TEXT_TOOL]);
-  h3("Edit"); grp(null,[ERASE_TOOL]);
+  h3("Terrain"); list(TERRAIN_TOOLS);
+  h3("Rivers"); list(RIVER_TOOLS);
+  h3("Points of interest"); list(POI_TOOLS);
+  h3("Text"); list([TEXT_TOOL]);
+  h3("Edit"); list([ERASE_TOOL]);
   reflectTool();
 }
+
+// ---- text panel ----
+function syncTextPanel(){
+  tpanelEl.style.display = active.kind==="text" ? "block" : "none";
+  updateTextPanel();
+}
+function updateTextPanel(){
+  const sel=selText>=0&&texts[selText];
+  txtEl.value = sel? sel.s : labelText;
+  tsizeEl.value = sel? sel.size : fontSize;
+  tsvEl.textContent = tsizeEl.value;
+  tdelEl.disabled = !sel;
+  thintEl.textContent = sel
+    ? "Selected — drag on map to move, edit above, or delete (Del)."
+    : "Click the map to add a label; click a label to edit it.";
+}
+function focusText(){ setTimeout(()=>{ txtEl.focus(); txtEl.select(); },0); }
+txtEl.addEventListener("input",e=>{ labelText=txtEl.value; if(selText>=0){ texts[selText].s=txtEl.value; dirty=true; render(); } scheduleSave(); });
+tsizeEl.addEventListener("input",e=>{ const v=+tsizeEl.value; fontSize=v; tsvEl.textContent=v; if(selText>=0){ texts[selText].size=v; dirty=true; render(); } scheduleSave(); });
+tdelEl.onclick=()=>{ if(selText>=0){ texts.splice(selText,1); selText=-1; updateTextPanel(); dirty=true; scheduleSave(true); render(); } };
 
 // ---- background ----
 document.getElementById("bgfile").addEventListener("change",e=>{ const f=e.target.files[0]; if(f) loadImage(f); });
@@ -639,9 +621,6 @@ stage.addEventListener("dragover",e=>{e.preventDefault();stage.classList.add("dr
 stage.addEventListener("dragleave",()=>stage.classList.remove("drag"));
 stage.addEventListener("drop",e=>{ e.preventDefault(); stage.classList.remove("drag"); const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith("image")) loadImage(f); });
 
-document.getElementById("txt").addEventListener("input",e=>{ labelText=e.target.value; if(active.kind==="text") render(); });
-document.getElementById("txtsize").addEventListener("input",e=>{ fontSize=+e.target.value; document.getElementById("tsv").textContent=e.target.value; if(active.kind==="text") render(); });
-
 // ---- view buttons ----
 const ctr=()=>({l:cv.getBoundingClientRect().left+cv.clientWidth/2,t:cv.getBoundingClientRect().top+cv.clientHeight/2});
 document.getElementById("zin").onclick=()=>{const c=ctr();zoomAt(c.l,c.t,1.25);};
@@ -651,10 +630,7 @@ document.getElementById("z1").onclick=()=>{ cam.z=1; cam.x=cv.clientWidth/2-(GRI
 
 // ---- data ----
 function exportDraw(g){
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-    const t=terrain[idx(c,r)]; if(!t) continue;
-    const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill();
-  }
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }
   g.strokeStyle="rgba(0,0,0,0.4)"; g.lineWidth=1; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(t){ const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); } }
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ if(entity[idx(c,r)]!==2) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle="#6f6f78"; g.fill(); }
@@ -678,12 +654,12 @@ document.getElementById("loadfile").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return; const rd=new FileReader();
   rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
     if(d.cols!==COLS||d.rows!==ROWS){alert("JSON dimensions don't match 100×100.");return;}
-    terrain.set(d.terrain||[]); rivers.set(d.rivers||[]); entity.set(d.entity||[]); texts=Array.isArray(d.texts)?d.texts:[];
-    dirty=true; render(); scheduleSave(true);
+    terrain.set(d.terrain||[]); rivers.set(d.rivers||[]); entity.set(d.entity||[]); texts=Array.isArray(d.texts)?d.texts:[]; selText=-1;
+    dirty=true; syncTextPanel(); render(); scheduleSave(true);
   }catch(err){alert("Invalid JSON: "+err.message);} };
   rd.readAsText(f);
 });
-document.getElementById("clear").onclick=()=>{ if(!confirm("Clear all hexes?")) return; terrain.fill(0); rivers.fill(0); entity.fill(0); texts=[]; dirty=true; render(); scheduleSave(true); };
+document.getElementById("clear").onclick=()=>{ if(!confirm("Clear all hexes and labels?")) return; terrain.fill(0); rivers.fill(0); entity.fill(0); texts=[]; selText=-1; dirty=true; syncTextPanel(); render(); scheduleSave(true); };
 
 // ---- autosave ----
 let saveTimer=null; const STORE="hexmapper.v3";
@@ -695,7 +671,7 @@ function loadSaved(){ try{ const s=localStorage.getItem(STORE); if(!s) return; c
 setInterval(()=>{document.getElementById("curzoom").textContent=Math.round(cam.z*100)+"%";},200);
 
 // ---- init ----
-buildPalette(); loadSaved(); resize(); fitGrid(); render();
+buildPalette(); syncTextPanel(); loadSaved(); resize(); fitGrid(); render();
 </script>
 </body>
 </html>

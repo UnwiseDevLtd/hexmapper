@@ -26,7 +26,7 @@ No build, lint, typecheck, or test step. Verify by opening the page and exercisi
   - `terrain` (Uint8): `0` empty, else a terrain id (scales are distinct ids, e.g. Trees=1 / Forest=2).
   - `rivers` (Uint8): `0` none, `1` water, `2` lava. A river only connects to neighbours of the **same** type.
   - `entity` (Uint8): `0` none, `1` town, `2` city, `3` unknown, `4` danger, `5` dungeon.
-  - `texts`: array of `{x,y,s,size}` in world coords (free-position labels, not hex-bound).
+  - `texts`: array of `{x,y,s,size}` in world coords (free-position labels, not hex-bound). Text is selection-based: pressing Text then clicking creates a selected label; selected labels drag to move, edit via the side panel, delete via `Del`/button.
 - **Merging tiles.** Water (`9,10`) and lava (`11,12`) merge across shared edges: `outlineHex()` strokes only edges whose neighbour has a *different* merge key (same-id neighbours blend; shallow↔deep keeps a contour). Cities merge the same way via the `cKey` overlay pass.
 - **Rivers as edges.** For each river hex, draw centre→midpoint for every shared edge whose neighbour carries the **same river type**. This makes a single-neighbour river terminate at the centre, and ≥2-neighbour rivers connect through the centre — by construction.
 - **Standalone & self-originated.** This repo references no siblings. Keep it that way.

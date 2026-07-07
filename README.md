@@ -11,7 +11,7 @@ Single self-contained `index.html`. No build step, no framework. Served via Dock
 - **Terrain** (two levels each, light → heavy): trees→forest, grasslands→hills, plains→desert, small→large mountain, shallow→deep water, shallow→deep lava; plus single-level marsh and fog. Water and lava merge across shared edges into continuous bodies (shallow↔deep keeps a contour line).
 - **Rivers** (water *or* lava) are overlays, not tiles. A river hex connects its centre to the midpoint of every edge it shares with another river of the **same type**, so a single-neighbour river terminates at the centre.
 - **Points of interest:** Town, City, Danger (skull), Dungeon (cave), Unknown (`?`). Cities merge across shared edges like water; the rest are standalone markers.
-- **Text labels:** black text on a white rounded box, adjustable font size. Click to place, click an existing label to delete.
+- **Text labels:** black text on a white rounded box, adjustable font size. Press **Text**, click the map to drop a *selected* label, then edit/drag/delete it; click an existing label to re-select. The options panel appears only while Text is active.
 - **Zoom & pan** — wheel-zoom to cursor, right/middle-drag or hold `Space` to pan.
 - **Drag-paint** with line-fill so fast strokes leave no gaps.
 - **Autosave** to `localStorage`; **export** a clean PNG (no background) and **save/load** as JSON.
@@ -38,6 +38,8 @@ make serve       # python static server
 | Pan   | Right-drag, middle-drag, or hold `Space` + drag |
 | Zoom  | Mouse wheel (toward cursor) |
 | Tools | `1`–`9` terrain · `0` erase · `r`/`l` water/lava river · `t` town · `c` city · `d` dungeon · `g` danger · `u` unknown · `x` text |
+
+In Text mode: click to add or select a label, drag to move, `Del` to delete, `Esc` to deselect.
 
 ## Status
 
