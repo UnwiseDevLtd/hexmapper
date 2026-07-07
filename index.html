@@ -69,8 +69,6 @@
 <body>
 
 <div id="side">
-  <div id="palette"></div>
-
   <div id="textpanel" style="display:none">
     <h3>Text — selected</h3>
     <div class="hint" id="texthint" style="margin:0 0 6px">Click the map to add a label; click a label to edit it.</div>
@@ -82,6 +80,8 @@
       <button class="act danger" id="txtdelete" disabled>Delete label</button>
     </div>
   </div>
+
+  <div id="palette"></div>
 
   <h3>Background image</h3>
   <label class="filebtn" for="bgfile" id="bglabel">Upload map image…</label>
@@ -571,17 +571,17 @@ function h3(text){ const h=document.createElement("h3"); h.textContent=text; pal
 function list(items){ const gw=document.createElement("div"); gw.className="tools"; items.forEach(d=>gw.appendChild(btn(d))); palEl.appendChild(gw); }
 function buildPalette(){
   palEl.innerHTML="";
+  h3("Text"); list([TEXT_TOOL]);
   h3("Terrain"); list(TERRAIN_TOOLS);
   h3("Rivers"); list(RIVER_TOOLS);
   h3("Points of interest"); list(POI_TOOLS);
-  h3("Text"); list([TEXT_TOOL]);
   h3("Edit"); list([ERASE_TOOL]);
   reflectTool();
 }
 
 // ---- text panel ----
 function syncTextPanel(){
-  tpanelEl.style.display = active.kind==="text" ? "block" : "none";
+  tpanelEl.style.display = selText>=0 ? "block" : "none";
   updateTextPanel();
 }
 function updateTextPanel(){
