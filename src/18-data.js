@@ -2,14 +2,12 @@ function exportDraw(g){
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }
   g.strokeStyle="rgba(0,0,0,0.4)"; g.lineWidth=1; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(t&&TERR[t]){ const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); } }
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ if(entity[idx(c,r)]!==2) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle="#6f6f78"; g.fill(); }
-  g.strokeStyle="rgba(0,0,0,0.5)"; g.lineWidth=1.2; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2) outlineHex(g,c,r,cKey);
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2){ const [cx,cy]=center(c,r); cityTexture(g,cx,cy); }
   drawOverlay(g, rivers, 1, WATER_RIVER, false);
   drawOverlay(g, rivers, 2, LAVA_RIVER, false);
   drawOverlay(g, roads, 1, ROAD_COLOR, true);
+  drawSettlementPaths(g);
   drawVeg(g);
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const e=entity[idx(c,r)]; if(e===0||e===2) continue; const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy); }
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const e=entity[idx(c,r)]; if(e===0) continue; const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy,c,r); }
   drawIds(g); drawTexts(g);
 }
 document.getElementById("export").onclick=()=>{

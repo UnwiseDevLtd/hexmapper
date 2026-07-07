@@ -32,13 +32,16 @@ const VEG_TOOLS=[
  {kind:"veg",type:1,label:"Trees",sw:"#2f6e2f"},
  {kind:"veg",type:2,label:"Forest",sw:"#0c3a12"},
 ];
-const ENT_NAME={1:"Town",2:"City",3:"Unknown",4:"Danger",5:"Cave"};
+const ENT_NAME={1:"Town",2:"City",3:"Unknown",4:"Danger",5:"Cave",6:"Castle",7:"Tower",8:"Campsite"};
 const POI_TOOLS=[
- {kind:"entity",id:1,label:"Town",    sw:"#ffd479"},
- {kind:"entity",id:2,label:"City",    sw:"#6f6f78"},
- {kind:"entity",id:5,label:"Cave",    sw:"#5b524a"},
- {kind:"entity",id:4,label:"Danger",  sw:"#eeeeee"},
- {kind:"entity",id:3,label:"Unknown", sw:"#ffe14d"},
+ {kind:"entity",id:1,label:"Town",     sw:"#ffd479"},
+ {kind:"entity",id:2,label:"City",     sw:"#9a93a3"},
+ {kind:"entity",id:6,label:"Castle",   sw:"#8a7a6a"},
+ {kind:"entity",id:7,label:"Tower",    sw:"#b8b8c0"},
+ {kind:"entity",id:8,label:"Campsite", sw:"#c98e4a"},
+ {kind:"entity",id:5,label:"Cave",     sw:"#5b524a"},
+ {kind:"entity",id:4,label:"Danger",   sw:"#eeeeee"},
+ {kind:"entity",id:3,label:"Unknown",  sw:"#ffe14d"},
 ];
 const TEXT_TOOL={kind:"text",label:"Text",sw:"#ffffff"};
 const ERASE_TOOL={kind:"erase",label:"Erase",sw:"repeating-linear-gradient(45deg,#333,#333 3px,#444 3px,#444 6px)"};
