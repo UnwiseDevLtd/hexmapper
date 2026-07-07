@@ -1,7 +1,7 @@
 let mode=null,lastHex=null,panStart=null,dragOff=null;
 stage.addEventListener("contextmenu",e=>e.preventDefault());
 stage.addEventListener("pointerdown",e=>{
-  stage.setPointerCapture(e.pointerId);
+  try{ stage.setPointerCapture(e.pointerId); }catch(_){}
   if(e.button===1){ mode="pan"; panStart={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y}; stage.classList.add("panning"); return; }
   if(e.button===2){ // right = erase (additive overlays removed via erase)
     curErase=true; mode="paint";
