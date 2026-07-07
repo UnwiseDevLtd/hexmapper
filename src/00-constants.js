@@ -45,9 +45,9 @@ const POI_TOOLS=[
 ];
 const TEXT_TOOL={kind:"text",label:"Text",sw:"#ffffff"};
 const PAINT_TOOLS=[
- {kind:"mode",mode:"line",label:"Paintbrush",icon:"🖌"},
- {kind:"mode",mode:"fill",label:"Bucket",icon:"🪣"},
+ {kind:"op",mode:"paint",label:"Paintbrush",icon:"🖌"},
+ {kind:"op",mode:"fill",label:"Bucket",icon:"🪣"},
+ {kind:"op",mode:"erase",label:"Eraser",icon:"🧽"},
 ];
-const ERASE_TOOL={kind:"erase",label:"Erase",sw:"repeating-linear-gradient(45deg,#333,#333 3px,#444 3px,#444 6px)"};
 
 let active={kind:"veg",type:1};

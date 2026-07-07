@@ -57,6 +57,7 @@ function render(){
 }
 function drawPreview(g){
   g.globalAlpha=0.5;
+  if(opMode==="erase"){ hexPath(g,0,0); g.fillStyle="#e27075"; g.fill(); g.globalAlpha=1; return; }
   if(active.kind==="terrain"){ const t=active.id; hexPath(g,0,0); g.fillStyle=TERR[t].fill; g.fill(); drawTerrain(g,t,0,0); }
   else if(active.kind==="veg"){
     if(active.type===1) tree(g,0,0,S*0.95,"#1f5a22"); else drawForestCluster(g,0,0);

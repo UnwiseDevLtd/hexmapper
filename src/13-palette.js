@@ -1,6 +1,6 @@
 const palEl=document.getElementById("palette");
 function selectTool(d){
-  if(d.kind==="mode"){ paintMode=d.mode; reflectTool(); render(); return; }
+  if(d.kind==="op"){ opMode=d.mode; reflectTool(); render(); return; }
   if(d.kind==="terrain") active={kind:"terrain",id:d.id};
   else if(d.kind==="river") active={kind:"river",type:d.type};
   else if(d.kind==="road") active={kind:"road"};
@@ -31,7 +31,6 @@ function activeSection(){
   const k=active.kind;
   if(k==="text") return "text";
   if(k==="terrain") return "terrain";
-  if(k==="erase") return "edit";
   return "features";
 }
 function openActiveSection(){
@@ -41,7 +40,7 @@ function openActiveSection(){
 function reflectTool(){
   document.querySelectorAll(".tool").forEach(b=>{
     const d=JSON.parse(b.dataset.d);
-    b.classList.toggle("on", d.kind==="mode" ? d.mode===paintMode : matchActive(d));
+    b.classList.toggle("on", d.kind==="op" ? d.mode===opMode : matchActive(d));
   });
   document.getElementById("curtool").textContent=toolName(active);
   openActiveSection();
@@ -49,7 +48,7 @@ function reflectTool(){
 function btn(d){
   const b=document.createElement("button");
   b.className="tool"; b.dataset.d=JSON.stringify(d);
-  const sw = d.kind==="mode"
+  const sw = d.kind==="op"
     ? `<span class="sw icon">${d.icon}</span>`
     : `<span class="sw" style="background:${d.sw}"></span>`;
   b.innerHTML=`${sw}<span class="lab">${d.label}</span>`;
@@ -76,6 +75,5 @@ function buildPalette(){
   palEl.appendChild(makeCollapse("Text", textBody, "text"));
   palEl.appendChild(makeCollapse("Terrain", toolList(TERRAIN_TOOLS), "terrain"));
   palEl.appendChild(makeCollapse("Features", toolList([...VEG_TOOLS, ...RIVER_TOOLS, ROAD_TOOL, ...POI_TOOLS]), "features"));
-  palEl.appendChild(makeCollapse("Edit", toolList([ERASE_TOOL]), "edit"));
   reflectTool();
 }
