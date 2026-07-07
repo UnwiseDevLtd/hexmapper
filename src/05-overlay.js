@@ -4,12 +4,29 @@ function overlayMids(arr, c, r, matchVal){
   return mids;
 }
 function sep6(a,b){ let d=Math.abs(a-b)%6; return d>3?6-d:d; }
-// draw the overlay segments for one tile. Repeatedly pair the FARTHEST-apart
-// connected edges (the through-path); opposite (gap 3) => straight line through
-// the centre, else a quadratic curve. Anything unpaired => a centre spoke.
+// Meaningful connectivity per connection count:
+// opposite edges -> straight through-lines. If any through-line exists, every
+// remaining edge is a branch SPOKE (never curved into a loop over a through).
+// With no through-line, pair the farthest remaining edges as quadratic curves
+// (a bend / split) and leave the odd one as a spoke; 1 alone is a terminus stub.
 function drawSegments(g, cx, cy, mids){
   if(!mids.length) return;
-  let pool=mids.slice();
+  const present=new Set(mids), used=new Set();
+  let throughs=0;
+  for(const d of mids){
+    if(used.has(d)) continue;
+    const o=(d+3)%6;
+    if(present.has(o)&&!used.has(o)){
+      used.add(d); used.add(o); throughs++;
+      const [ax,ay]=EDGE_MID[d],[bx,by]=EDGE_MID[o];
+      g.beginPath(); g.moveTo(cx+ax,cy+ay); g.lineTo(cx+bx,cy+by); g.stroke();
+    }
+  }
+  let pool=mids.filter(d=>!used.has(d));
+  if(throughs>0){
+    for(const d of pool){ const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); }
+    return;
+  }
   while(pool.length>=2){
     let bi=0,bj=1,bs=-1;
     for(let i=0;i<pool.length;i++) for(let j=i+1;j<pool.length;j++){
@@ -18,9 +35,7 @@ function drawSegments(g, cx, cy, mids){
     }
     const d1=pool[bi], d2=pool[bj];
     const [ax,ay]=EDGE_MID[d1], [bx,by]=EDGE_MID[d2];
-    g.beginPath(); g.moveTo(cx+ax,cy+ay);
-    if(bs===3) g.lineTo(cx+bx,cy+by); else g.quadraticCurveTo(cx,cy,cx+bx,cy+by);
-    g.stroke();
+    g.beginPath(); g.moveTo(cx+ax,cy+ay); g.quadraticCurveTo(cx,cy,cx+bx,cy+by); g.stroke();
     pool.splice(bj,1); pool.splice(bi,1);
   }
   for(const d of pool){ const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); }
