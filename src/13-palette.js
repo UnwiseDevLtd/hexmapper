@@ -44,9 +44,7 @@ function buildPalette(){
   h3("Text"); list([TEXT_TOOL]);
   palEl.appendChild(tpanelEl);
   h3("Terrain"); list(TERRAIN_TOOLS);
-  h3("Vegetation"); list(VEG_TOOLS);
-  h3("Rivers & roads"); list([...RIVER_TOOLS, ROAD_TOOL]);
-  h3("Points of interest"); list(POI_TOOLS);
+  h3("Features"); list([...VEG_TOOLS, ...RIVER_TOOLS, ROAD_TOOL, ...POI_TOOLS]);
   h3("Edit"); list([ERASE_TOOL]);
   reflectTool();
 }
