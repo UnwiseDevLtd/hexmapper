@@ -11,6 +11,7 @@ function waveH(g,cx,cy,scale){
   g.stroke();
 }
 function drawTerrain(g,id,cx,cy){
+  if(!TERR[id]) return;
   const sym=TERR[id].sym; g.fillStyle=sym; g.strokeStyle=sym; g.lineJoin="round"; g.lineCap="round";
   switch(id){
     case 3: g.lineWidth=S*0.07; for(const [tx,ty] of [[-0.25,0.12],[0.05,-0.06],[0.25,0.16]]){ g.beginPath(); g.moveTo(cx+tx*S,cy+ty*S); g.lineTo(cx+tx*S,cy+(ty-0.13)*S); g.stroke(); } break;

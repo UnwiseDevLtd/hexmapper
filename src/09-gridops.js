@@ -2,6 +2,14 @@ function allocArrays(){
   terrain=new Uint8Array(ROWS*COLS); rivers=new Uint8Array(ROWS*COLS);
   roads=new Uint8Array(ROWS*COLS); veg=new Uint8Array(ROWS*COLS); entity=new Uint8Array(ROWS*COLS);
 }
+// legacy terrain ids 1/2 (Trees/Forest, now a vegetation overlay) -> grasslands + veg
+function migrateArrays(){
+  for(let i=0;i<terrain.length;i++){
+    const t=terrain[i];
+    if(t===1||t===2){ if(!veg[i]) veg[i]=t; terrain[i]=3; }
+    else if(t>14){ terrain[i]=0; }
+  }
+}
 function updateDims(){
   dimsEl.textContent=`${COLS} × ${ROWS} hexes`;
   document.getElementById("colsin").value=COLS; document.getElementById("rowsin").value=ROWS;

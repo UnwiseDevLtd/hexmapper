@@ -1,7 +1,7 @@
 function exportDraw(g){
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }
   g.strokeStyle="rgba(0,0,0,0.4)"; g.lineWidth=1; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(t){ const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); } }
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(t&&TERR[t]){ const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); } }
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ if(entity[idx(c,r)]!==2) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle="#6f6f78"; g.fill(); }
   g.strokeStyle="rgba(0,0,0,0.5)"; g.lineWidth=1.2; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2) outlineHex(g,c,r,cKey);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2){ const [cx,cy]=center(c,r); cityTexture(g,cx,cy); }
@@ -27,6 +27,7 @@ document.getElementById("loadfile").addEventListener("change",e=>{
   rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
     COLS=d.cols||COLS; ROWS=d.rows||ROWS; recomputeGrid(); allocArrays();
     if(d.terrain) terrain.set(d.terrain); if(d.rivers) rivers.set(d.rivers); if(d.roads) roads.set(d.roads); if(d.veg) veg.set(d.veg); if(d.entity) entity.set(d.entity);
+    migrateArrays();
     texts=Array.isArray(d.texts)?d.texts:[]; selText=-1;
     dirty=true; updateDims(); syncTextPanel(); fitGrid(); render(); commit("load"); scheduleSave(true);
   }catch(err){alert("Invalid JSON: "+err.message);} };
