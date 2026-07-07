@@ -10,13 +10,6 @@ document.addEventListener("click",e=>{
   col.classList.toggle("open");
 });
 
-function setPaintMode(m){
-  paintMode=m;
-  document.getElementById("pmline").classList.toggle("on",m==="line");
-  document.getElementById("pmfill").classList.toggle("on",m==="fill");
-}
-document.getElementById("pmline").onclick=()=>setPaintMode("line");
-document.getElementById("pmfill").onclick=()=>setPaintMode("fill");
 document.getElementById("dimapply").onclick=()=>{ resizeGrid(+document.getElementById("colsin").value||1, +document.getElementById("rowsin").value||1); };
 document.getElementById("rotate").onclick=transposeGrid;
 document.getElementById("idshow").addEventListener("change",e=>{ showIds=e.target.checked; dirty=true; render(); });

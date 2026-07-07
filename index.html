@@ -28,6 +28,8 @@
   .tool.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset;background:#2c3243}
   .tool .sw{width:15px;height:15px;border-radius:4px;flex:0 0 15px;border:1px solid rgba(0,0,0,.4)}
   .tool .lab{flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .paint-row{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 0 8px}
+  .tool .sw.icon{background:transparent;border:none;font-size:14px;display:flex;align-items:center;justify-content:center;line-height:1}
   #textpanel{background:#1f2229;border:1px solid var(--line);border-radius:8px;padding:8px;margin:2px 0 6px}
   label{display:block;margin:8px 0 3px;color:var(--dim);font-size:11px}
   input[type=range]{width:100%}
@@ -118,12 +120,6 @@
     <div class="collapse">
       <button class="collapse-head" type="button"><span class="ttl">Settings</span><span class="caret">▸</span></button>
       <div class="collapse-body">
-        <label>Paint</label>
-        <div class="row tight">
-          <button class="act on" id="pmline">Line (drag)</button>
-          <button class="act" id="pmfill">Fill (bucket)</button>
-        </div>
-        <div class="hint">Fill floods connected tiles matching the one you click.</div>
         <label>Grid</label>
         <div class="row tight">
           <label style="margin:0;flex:1">Cols <input type="number" id="colsin" value="100" min="1" max="400" style="margin-top:3px"></label>

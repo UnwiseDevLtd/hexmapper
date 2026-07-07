@@ -44,6 +44,10 @@ const POI_TOOLS=[
  {kind:"entity",id:3,label:"Unknown",  sw:"#ffe14d"},
 ];
 const TEXT_TOOL={kind:"text",label:"Text",sw:"#ffffff"};
+const PAINT_TOOLS=[
+ {kind:"mode",mode:"line",label:"Paintbrush",icon:"🖌"},
+ {kind:"mode",mode:"fill",label:"Bucket",icon:"🪣"},
+];
 const ERASE_TOOL={kind:"erase",label:"Erase",sw:"repeating-linear-gradient(45deg,#333,#333 3px,#444 3px,#444 6px)"};
 
 let active={kind:"veg",type:1};

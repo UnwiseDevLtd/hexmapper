@@ -1,5 +1,6 @@
 const palEl=document.getElementById("palette");
 function selectTool(d){
+  if(d.kind==="mode"){ paintMode=d.mode; reflectTool(); render(); return; }
   if(d.kind==="terrain") active={kind:"terrain",id:d.id};
   else if(d.kind==="river") active={kind:"river",type:d.type};
   else if(d.kind==="road") active={kind:"road"};
@@ -38,14 +39,20 @@ function openActiveSection(){
   palEl.querySelectorAll(":scope > .collapse").forEach(c=>c.classList.toggle("open", c.dataset.section===s));
 }
 function reflectTool(){
-  document.querySelectorAll(".tool").forEach(b=>{ const d=JSON.parse(b.dataset.d); b.classList.toggle("on",matchActive(d)); });
+  document.querySelectorAll(".tool").forEach(b=>{
+    const d=JSON.parse(b.dataset.d);
+    b.classList.toggle("on", d.kind==="mode" ? d.mode===paintMode : matchActive(d));
+  });
   document.getElementById("curtool").textContent=toolName(active);
   openActiveSection();
 }
 function btn(d){
   const b=document.createElement("button");
   b.className="tool"; b.dataset.d=JSON.stringify(d);
-  b.innerHTML=`<span class="sw" style="background:${d.sw}"></span><span class="lab">${d.label}</span>`;
+  const sw = d.kind==="mode"
+    ? `<span class="sw icon">${d.icon}</span>`
+    : `<span class="sw" style="background:${d.sw}"></span>`;
+  b.innerHTML=`${sw}<span class="lab">${d.label}</span>`;
   b.onclick=()=>selectTool(d);
   return b;
 }
@@ -60,6 +67,9 @@ function makeCollapse(title, bodyEl, section){
 }
 function buildPalette(){
   palEl.innerHTML="";
+  const pm=document.createElement("div"); pm.className="paint-row";
+  PAINT_TOOLS.forEach(d=>pm.appendChild(btn(d)));
+  palEl.appendChild(pm);
   const textBody=document.createElement("div");
   textBody.appendChild(btn(TEXT_TOOL));
   textBody.appendChild(tpanelEl);
