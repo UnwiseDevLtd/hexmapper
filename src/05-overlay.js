@@ -11,8 +11,24 @@ function drawSegments(g, cx, cy, mids){
   if(mids.length===2){
     const [ax,ay]=EDGE_MID[mids[0]], [bx,by]=EDGE_MID[mids[1]];
     g.beginPath(); g.moveTo(cx+ax,cy+ay); g.quadraticCurveTo(cx,cy,cx+bx,cy+by); g.stroke();
-  } else {
-    for(const d of mids){ const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); }
+    return;
+  }
+  // 1 or 3+: join FAR (opposite) edges as straight through-lines first, then
+  // adjacent edges as smooth curves, then anything left as a centre spoke.
+  const present=new Set(mids), used=new Set();
+  for(const d of mids){
+    if(used.has(d)) continue;
+    const o=(d+3)%6;
+    if(present.has(o)&&!used.has(o)){ used.add(d); used.add(o); const [ax,ay]=EDGE_MID[d],[bx,by]=EDGE_MID[o]; g.beginPath(); g.moveTo(cx+ax,cy+ay); g.lineTo(cx+bx,cy+by); g.stroke(); }
+  }
+  for(const d of mids){
+    if(used.has(d)) continue;
+    const a=(d+1)%6;
+    if(present.has(a)&&!used.has(a)){ used.add(d); used.add(a); const [ax,ay]=EDGE_MID[d],[bx,by]=EDGE_MID[a]; g.beginPath(); g.moveTo(cx+ax,cy+ay); g.quadraticCurveTo(cx,cy,cx+bx,cy+by); g.stroke(); }
+  }
+  for(const d of mids){
+    if(used.has(d)) continue;
+    const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke();
   }
 }
 function drawOverlay(g, arr, matchVal, color, dashed){
