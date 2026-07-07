@@ -1,13 +1,14 @@
-function drawBgLayer(g){
-  if(!bgImg) return;
+function bgRect(){
+  if(!bgImg) return null;
   const fit=Math.min(GRID_W/bgImg.width,GRID_H/bgImg.height)*bgScaleMul;
   const dw=bgImg.width*fit, dh=bgImg.height*fit;
   const dx=(GRID_W-dw)/2+bgOffX, dy=(GRID_H-dh)/2+bgOffY;
-  // solid backdrop fills the image's transparent pixels; only the image itself
-  // respects bgOp, so the backdrop stays full-strength at any opacity.
-  g.fillStyle=bgColor; g.fillRect(dx,dy,dw,dh);
-  g.globalAlpha=bgOp; g.drawImage(bgImg,dx,dy,dw,dh); g.globalAlpha=1;
+  return [dx,dy,dw,dh];
 }
+// backdrop is solid and ALWAYS below the tiles (it fills the image's alpha but
+// never covers painted tiles, even in "image above tiles" mode).
+function drawBackdrop(g){ const r=bgRect(); if(!r) return; g.fillStyle=bgColor; g.fillRect(r[0],r[1],r[2],r[3]); }
+function drawBgImage(g){ const r=bgRect(); if(!r) return; g.globalAlpha=bgOp; g.drawImage(bgImg,r[0],r[1],r[2],r[3]); g.globalAlpha=1; }
 function drawTilesLayer(g){
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }
   g.strokeStyle="rgba(0,0,0,0.32)"; g.lineWidth=1;
@@ -23,9 +24,10 @@ function drawTilesLayer(g){
 }
 function buildWorld(includeBg){
   const g=wctx; g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,world.width,world.height);
-  if(includeBg && !bgAbove) drawBgLayer(g);
+  if(includeBg) drawBackdrop(g);
+  if(includeBg && !bgAbove) drawBgImage(g);
   drawTilesLayer(g);
-  if(includeBg && bgAbove) drawBgLayer(g);
+  if(includeBg && bgAbove) drawBgImage(g);
   drawTexts(g);
   g.strokeStyle="rgba(255,255,255,0.15)"; g.lineWidth=2; g.strokeRect(0,0,GRID_W,GRID_H);
 }
