@@ -47,6 +47,7 @@
   .tool .sw{width:15px;height:15px;border-radius:4px;flex:0 0 15px;border:1px solid rgba(0,0,0,.4)}
   .tool .lab{flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tool .k{font-size:9px;color:var(--dim);background:#1b1d22;border-radius:3px;padding:1px 4px;flex:0 0 auto}
+  #textpanel{background:#1f2229;border:1px solid var(--line);border-radius:8px;padding:8px;margin:2px 0 6px}
   label{display:block;margin:8px 0 3px;color:var(--dim);font-size:11px}
   input[type=range]{width:100%}
   input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit}
@@ -69,10 +70,11 @@
 <body>
 
 <div id="side">
+  <div id="palette"></div>
+
   <div id="textpanel" style="display:none">
-    <h3>Text — selected</h3>
     <div class="hint" id="texthint" style="margin:0 0 6px">Click the map to add a label; click a label to edit it.</div>
-    <label>Text</label>
+    <label>Label</label>
     <input id="txt" type="text" placeholder="Label text…" autocomplete="off">
     <label>Font size <span id="tsv">14</span></label>
     <input id="txtsize" type="range" min="6" max="48" value="14">
@@ -80,8 +82,6 @@
       <button class="act danger" id="txtdelete" disabled>Delete label</button>
     </div>
   </div>
-
-  <div id="palette"></div>
 
   <h3>Background image</h3>
   <label class="filebtn" for="bgfile" id="bglabel">Upload map image…</label>
@@ -108,6 +108,10 @@
     <button class="act" id="zfit">Fit grid</button>
     <button class="act" id="z1">1:1</button>
   </div>
+  <div class="row" style="margin-top:6px">
+    <button class="act" id="undo" disabled>↶ Undo</button>
+    <button class="act" id="redo" disabled>↷ Redo</button>
+  </div>
 
   <h3>Data</h3>
   <div class="row">
@@ -122,11 +126,12 @@
 
   <h3>Controls</h3>
   <div class="hint">
-    <b>Left-drag</b> paint &nbsp;·&nbsp; <b>Right/Middle-drag</b> pan<br>
-    <b>Wheel</b> zoom to cursor &nbsp;·&nbsp; hold <code>Space</code> to pan<br>
-    Keys: <code>1</code>–<code>9</code> terrain · <code>0</code> erase<br>
-    <code>r</code>/<code>l</code> water/lava river · <code>t</code> town <code>c</code> city <code>d</code> dungeon <code>g</code> danger <code>u</code> unknown · <code>x</code> text<br>
-    In Text mode: click to add/select · drag to move · <code>Del</code> delete · <code>Esc</code> deselect
+    <b>Left-drag</b> paint &nbsp;·&nbsp; <b>Right-click/drag</b> erase<br>
+    <b>Middle-drag</b> or hold <code>Space</code> pan &nbsp;·&nbsp; <b>Wheel</b> zoom<br>
+    <code>Ctrl+Z</code> undo &nbsp;·&nbsp; <code>Ctrl+Shift+Z</code> redo<br>
+    Keys: <code>1</code>–<code>9</code> terrain · <code>0</code> erase · <code>r</code>/<code>l</code> water/lava river<br>
+    <code>t</code> town <code>c</code> city <code>d</code> dungeon <code>g</code> danger <code>u</code> unknown · <code>x</code> text<br>
+    Text: click to add/select · drag to move · <code>Del</code> delete · <code>Esc</code> deselect
   </div>
   <div class="hint" style="margin-top:8px;color:var(--acc2)">Autosaves to this browser.</div>
 </div>
@@ -196,7 +201,7 @@ const terrain=new Uint8Array(ROWS*COLS);
 const rivers =new Uint8Array(ROWS*COLS); // 0 none, 1 water, 2 lava
 const entity =new Uint8Array(ROWS*COLS); // 0 none, 1 town, 2 city, 3 unknown, 4 danger, 5 dungeon
 let texts=[]; // {x,y,s,size} world coords
-let selText=-1;        // index of selected text label
+let selText=-1;
 
 // ---- canvas / camera ----
 const cv=document.getElementById("cv");
@@ -208,7 +213,7 @@ const wctx=world.getContext("2d");
 let cam={x:0,y:0,z:1};
 let bgImg=null,bgOp=0.45,bgScaleMul=1,bgOffX=0,bgOffY=0;
 let dirty=true, hover={c:-1,r:-1};
-let labelText="Label", fontSize=14;
+let fontSize=14;
 
 const txtEl=document.getElementById("txt");
 const tsvEl=document.getElementById("tsv");
@@ -216,6 +221,8 @@ const tsizeEl=document.getElementById("txtsize");
 const tdelEl=document.getElementById("txtdelete");
 const thintEl=document.getElementById("texthint");
 const tpanelEl=document.getElementById("textpanel");
+const undoBtn=document.getElementById("undo");
+const redoBtn=document.getElementById("redo");
 
 function resize(){
   const dpr=Math.min(window.devicePixelRatio||1,2);
@@ -369,7 +376,7 @@ function drawTexts(g){
     const m=textMetrics(t);
     g.fillStyle="#fff"; roundRect(g,t.x-m.w/2,t.y-m.h/2,m.w,m.h,t.size*0.2); g.fill();
     g.strokeStyle="rgba(0,0,0,0.18)"; g.lineWidth=1; g.stroke();
-    g.fillStyle="#000"; g.fillText(t.s,t.x,t.y);
+    if(t.s){ g.fillStyle="#000"; g.fillText(t.s,t.x,t.y); }
   }
   g.restore();
 }
@@ -419,7 +426,6 @@ function render(){
   ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
   ctx.imageSmoothingEnabled=true;
   ctx.drawImage(world,cam.x,cam.y,world.width*cam.z,world.height*cam.z);
-  // text selection highlight
   if(selText>=0&&texts[selText]){
     const t=texts[selText], m=textMetrics(t);
     const sx=t.x*cam.z+cam.x, sy=t.y*cam.z+cam.y;
@@ -462,17 +468,43 @@ function fitGrid(){
   cam.x=cv.clientWidth/2-(GRID_W/2)*cam.z; cam.y=cv.clientHeight/2-(GRID_H/2)*cam.z; render();
 }
 
+// ---- history (undo/redo) ----
+let history=[], histPtr=-1, lastKind=null, lastTime=0;
+const HIST_MAX=100;
+function snapshot(){ return {terrain:terrain.slice(),rivers:rivers.slice(),entity:entity.slice(),texts:texts.map(t=>({...t}))}; }
+function restore(s){
+  terrain.set(s.terrain); rivers.set(s.rivers); entity.set(s.entity);
+  texts=s.texts.map(t=>({...t})); selText=-1; dirty=true; syncTextPanel(); render();
+}
+function commit(kind){
+  const now=Date.now(), snap=snapshot();
+  if(kind==="text"&&lastKind==="text"&&now-lastTime<500&&histPtr>=0&&histPtr===history.length-1){
+    history[histPtr]=snap; // coalesce rapid typing/size edits
+  } else {
+    history=history.slice(0,histPtr+1); history.push(snap);
+    if(history.length>HIST_MAX) history.shift();
+    histPtr=history.length-1;
+  }
+  lastKind=kind; lastTime=now; updateHistButtons();
+}
+function undo(){ if(histPtr<=0) return; histPtr--; restore(history[histPtr]); lastKind=null; updateHistButtons(); scheduleSave(true); }
+function redo(){ if(histPtr>=history.length-1) return; histPtr++; restore(history[histPtr]); lastKind=null; updateHistButtons(); scheduleSave(true); }
+function updateHistButtons(){ undoBtn.disabled=histPtr<=0; redoBtn.disabled=histPtr>=history.length-1; }
+
 // ---- painting ----
-let strokeVal=0;
+let strokeVal=0, curErase=false;
 function paintHex(c,r){
   if(!inB(c,r)) return;
   const i=idx(c,r);
-  switch(active.kind){
-    case "erase": terrain[i]=0; rivers[i]=0; entity[i]=0;
-      texts=texts.filter(t=>{ const [tc,tr]=worldToHex(t.x,t.y); return !(tc===c&&tr===r); }); break;
-    case "terrain": terrain[i]=active.id; break;
-    case "river":   rivers[i]=strokeVal; break;
-    case "entity":  entity[i]=active.id; break;
+  if(curErase||active.kind==="erase"){
+    terrain[i]=0; rivers[i]=0; entity[i]=0;
+    texts=texts.filter(t=>{ const [tc,tr]=worldToHex(t.x,t.y); return !(tc===c&&tr===r); });
+  } else {
+    switch(active.kind){
+      case "terrain": terrain[i]=active.id; break;
+      case "river":   rivers[i]=strokeVal; break;
+      case "entity":  entity[i]=active.id; break;
+    }
   }
   dirty=true;
 }
@@ -487,15 +519,19 @@ let mode=null,lastHex=null,panStart=null,space=false,dragOff=null;
 stage.addEventListener("contextmenu",e=>e.preventDefault());
 stage.addEventListener("pointerdown",e=>{
   stage.setPointerCapture(e.pointerId);
-  if(e.button===1||e.button===2||space){ mode="pan"; panStart={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y}; stage.classList.add("panning"); return; }
+  if(e.button===1||space){ mode="pan"; panStart={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y}; stage.classList.add("panning"); return; }
+  if(e.button===2){ // right button: erase (click or drag), regardless of active tool
+    curErase=true; mode="paint";
+    const [wx,wy]=clientToWorld(e.clientX,e.clientY), [c,r]=worldToHex(wx,wy);
+    paintHex(c,r); lastHex={c,r}; scheduleSave(); render(); return;
+  }
+  curErase = active.kind==="erase";
   if(active.kind==="text"){
     const [wx,wy]=clientToWorld(e.clientX,e.clientY);
     const hi=hitText(wx,wy);
     if(hi>=0){ selText=hi; dragOff={x:wx-texts[hi].x,y:wy-texts[hi].y}; }
-    else { texts.push({x:wx,y:wy,s:labelText,size:fontSize}); selText=texts.length-1; dragOff={x:0,y:0}; focusText(); }
-    updateTextPanel(); dirty=true; scheduleSave(); render();
-    mode="textdrag";
-    return;
+    else { texts.push({x:wx,y:wy,s:"",size:fontSize}); selText=texts.length-1; dragOff={x:0,y:0}; commit("create"); }
+    syncTextPanel(); dirty=true; render(); mode="textdrag"; return;
   }
   mode="paint";
   const [wx,wy]=clientToWorld(e.clientX,e.clientY);
@@ -513,17 +549,31 @@ stage.addEventListener("pointermove",e=>{
   else if(mode==="paint"){ if(lastHex) paintLine(lastHex.c,lastHex.r,c,r); else paintHex(c,r); lastHex={c,r}; scheduleSave(); render(); }
   else render();
 });
-function endPtr(e){ if(mode==="paint"||mode==="textdrag") scheduleSave(true); mode=null; lastHex=null; dragOff=null; stage.classList.remove("panning"); stage.classList.remove("textmode"); try{stage.releasePointerCapture(e.pointerId);}catch(_){} render(); }
+function endPtr(e){
+  if(mode==="paint") commit("paint");
+  else if(mode==="textdrag") commit("drag");
+  if(mode==="paint"||mode==="textdrag") scheduleSave(true);
+  mode=null; lastHex=null; dragOff=null; curErase=false;
+  stage.classList.remove("panning"); stage.classList.remove("textmode");
+  try{stage.releasePointerCapture(e.pointerId);}catch(_){}
+  render();
+}
 stage.addEventListener("pointerup",endPtr);
 stage.addEventListener("pointercancel",endPtr);
 stage.addEventListener("pointerleave",()=>{ hover={c:-1,r:-1}; if(mode!=="paint"&&mode!=="textdrag") render(); });
 stage.addEventListener("wheel",e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY,e.deltaY<0?1.12:1/1.12); },{passive:false});
 
 window.addEventListener("keydown",e=>{
+  const mod=e.ctrlKey||e.metaKey;
+  if(mod && (e.code==="KeyZ"||e.code==="KeyY")){
+    e.preventDefault();
+    if(e.code==="KeyY"||e.shiftKey) redo(); else undo();
+    return;
+  }
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
   if(e.code==="Space"){ space=true; stage.classList.add("panning"); return; }
-  if(e.code==="Escape"){ if(selText>=0){ selText=-1; updateTextPanel(); render(); } return; }
-  if(e.code==="Delete"||e.code==="Backspace"){ if(selText>=0){ texts.splice(selText,1); selText=-1; updateTextPanel(); scheduleSave(true); render(); } return; }
+  if(e.code==="Escape"){ if(selText>=0){ selText=-1; syncTextPanel(); render(); } return; }
+  if(e.code==="Delete"||e.code==="Backspace"){ if(selText>=0){ texts.splice(selText,1); selText=-1; syncTextPanel(); dirty=true; scheduleSave(true); commit("delete"); render(); } return; }
   const k=e.key.toLowerCase();
   if(k>="1"&&k<="9"){ const id=+k; if(TERR[id]) selectTool({kind:"terrain",id}); return; }
   if(k==="0"){ selectTool({kind:"erase"}); return; }
@@ -572,6 +622,7 @@ function list(items){ const gw=document.createElement("div"); gw.className="tool
 function buildPalette(){
   palEl.innerHTML="";
   h3("Text"); list([TEXT_TOOL]);
+  palEl.appendChild(tpanelEl); // text options sit immediately under the Text tool
   h3("Terrain"); list(TERRAIN_TOOLS);
   h3("Rivers"); list(RIVER_TOOLS);
   h3("Points of interest"); list(POI_TOOLS);
@@ -580,24 +631,20 @@ function buildPalette(){
 }
 
 // ---- text panel ----
-function syncTextPanel(){
-  tpanelEl.style.display = selText>=0 ? "block" : "none";
-  updateTextPanel();
-}
+function syncTextPanel(){ tpanelEl.style.display = selText>=0 ? "block" : "none"; updateTextPanel(); }
 function updateTextPanel(){
   const sel=selText>=0&&texts[selText];
-  txtEl.value = sel? sel.s : labelText;
+  txtEl.value = sel? sel.s : "";
   tsizeEl.value = sel? sel.size : fontSize;
   tsvEl.textContent = tsizeEl.value;
   tdelEl.disabled = !sel;
   thintEl.textContent = sel
-    ? "Selected — drag on map to move, edit above, or delete (Del)."
+    ? "Selected — drag on map to move, type above, or delete (Del)."
     : "Click the map to add a label; click a label to edit it.";
 }
-function focusText(){ setTimeout(()=>{ txtEl.focus(); txtEl.select(); },0); }
-txtEl.addEventListener("input",e=>{ labelText=txtEl.value; if(selText>=0){ texts[selText].s=txtEl.value; dirty=true; render(); } scheduleSave(); });
-tsizeEl.addEventListener("input",e=>{ const v=+tsizeEl.value; fontSize=v; tsvEl.textContent=v; if(selText>=0){ texts[selText].size=v; dirty=true; render(); } scheduleSave(); });
-tdelEl.onclick=()=>{ if(selText>=0){ texts.splice(selText,1); selText=-1; updateTextPanel(); dirty=true; scheduleSave(true); render(); } };
+txtEl.addEventListener("input",()=>{ if(selText>=0){ texts[selText].s=txtEl.value; dirty=true; render(); commit("text"); scheduleSave(); } });
+tsizeEl.addEventListener("input",()=>{ const v=+tsizeEl.value; fontSize=v; tsvEl.textContent=v; if(selText>=0){ texts[selText].size=v; dirty=true; render(); commit("text"); scheduleSave(); } });
+tdelEl.onclick=()=>{ if(selText>=0){ texts.splice(selText,1); selText=-1; syncTextPanel(); dirty=true; scheduleSave(true); commit("delete"); render(); } };
 
 // ---- background ----
 document.getElementById("bgfile").addEventListener("change",e=>{ const f=e.target.files[0]; if(f) loadImage(f); });
@@ -621,12 +668,13 @@ stage.addEventListener("dragover",e=>{e.preventDefault();stage.classList.add("dr
 stage.addEventListener("dragleave",()=>stage.classList.remove("drag"));
 stage.addEventListener("drop",e=>{ e.preventDefault(); stage.classList.remove("drag"); const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith("image")) loadImage(f); });
 
-// ---- view buttons ----
+// ---- view / history buttons ----
 const ctr=()=>({l:cv.getBoundingClientRect().left+cv.clientWidth/2,t:cv.getBoundingClientRect().top+cv.clientHeight/2});
 document.getElementById("zin").onclick=()=>{const c=ctr();zoomAt(c.l,c.t,1.25);};
 document.getElementById("zout").onclick=()=>{const c=ctr();zoomAt(c.l,c.t,1/1.25);};
 document.getElementById("zfit").onclick=fitGrid;
 document.getElementById("z1").onclick=()=>{ cam.z=1; cam.x=cv.clientWidth/2-(GRID_W/2); cam.y=cv.clientHeight/2-(GRID_H/2); render(); };
+undoBtn.onclick=undo; redoBtn.onclick=redo;
 
 // ---- data ----
 function exportDraw(g){
@@ -655,11 +703,11 @@ document.getElementById("loadfile").addEventListener("change",e=>{
   rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
     if(d.cols!==COLS||d.rows!==ROWS){alert("JSON dimensions don't match 100×100.");return;}
     terrain.set(d.terrain||[]); rivers.set(d.rivers||[]); entity.set(d.entity||[]); texts=Array.isArray(d.texts)?d.texts:[]; selText=-1;
-    dirty=true; syncTextPanel(); render(); scheduleSave(true);
+    dirty=true; syncTextPanel(); render(); commit("load"); scheduleSave(true);
   }catch(err){alert("Invalid JSON: "+err.message);} };
   rd.readAsText(f);
 });
-document.getElementById("clear").onclick=()=>{ if(!confirm("Clear all hexes and labels?")) return; terrain.fill(0); rivers.fill(0); entity.fill(0); texts=[]; selText=-1; dirty=true; syncTextPanel(); render(); scheduleSave(true); };
+document.getElementById("clear").onclick=()=>{ if(!confirm("Clear all hexes and labels?")) return; terrain.fill(0); rivers.fill(0); entity.fill(0); texts=[]; selText=-1; dirty=true; syncTextPanel(); render(); commit("clear"); scheduleSave(true); };
 
 // ---- autosave ----
 let saveTimer=null; const STORE="hexmapper.v3";
@@ -671,7 +719,7 @@ function loadSaved(){ try{ const s=localStorage.getItem(STORE); if(!s) return; c
 setInterval(()=>{document.getElementById("curzoom").textContent=Math.round(cam.z*100)+"%";},200);
 
 // ---- init ----
-buildPalette(); syncTextPanel(); loadSaved(); resize(); fitGrid(); render();
+buildPalette(); loadSaved(); resize(); fitGrid(); commit("init"); syncTextPanel(); render();
 </script>
 </body>
 </html>

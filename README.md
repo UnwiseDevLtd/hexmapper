@@ -15,6 +15,7 @@ Single self-contained `index.html`. No build step, no framework. Served via Dock
 - **Zoom & pan** — wheel-zoom to cursor, right/middle-drag or hold `Space` to pan.
 - **Drag-paint** with line-fill so fast strokes leave no gaps.
 - **Autosave** to `localStorage`; **export** a clean PNG (no background) and **save/load** as JSON.
+- **Undo/redo** — every paint stroke, erase, text edit/move/delete is a history step (`Ctrl+Z` / `Ctrl+Shift+Z`, or the buttons). Rapid typing coalesces into one step.
 
 ## Quick start
 
@@ -35,11 +36,13 @@ make serve       # python static server
 | Action | How |
 |--------|-----|
 | Paint | Left-drag |
-| Pan   | Right-drag, middle-drag, or hold `Space` + drag |
+| Erase | Right-click or right-drag |
+| Pan   | Middle-drag, or hold `Space` + drag |
 | Zoom  | Mouse wheel (toward cursor) |
+| Undo / Redo | `Ctrl+Z` / `Ctrl+Shift+Z` (or `Ctrl+Y`) |
 | Tools | `1`–`9` terrain · `0` erase · `r`/`l` water/lava river · `t` town · `c` city · `d` dungeon · `g` danger · `u` unknown · `x` text |
 
-In Text mode: click to add or select a label, drag to move, `Del` to delete, `Esc` to deselect.
+In Text mode: click to add or select a label (its value is edited in the panel, not placed at the cursor), drag to move, `Del` to delete, `Esc` to deselect.
 
 ## Status
 
