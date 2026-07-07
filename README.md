@@ -1,6 +1,6 @@
 # hexmapper
 
-A small, dependency-free browser tool for **tracing an image into a hex-grid map**. Upload a map picture as a semi-transparent background, then drag over hexes to paint terrain, water, rivers, settlements, and entities. Everything runs client-side; nothing is uploaded.
+A small, dependency-free browser tool for **tracing an image into a hex-grid map**. Upload a map picture as a semi-transparent background, then drag over hexes to paint **terrain**, **rivers**, **points of interest**, and **text labels**. Everything runs client-side; nothing is uploaded.
 
 Single self-contained `index.html`. No build step, no framework. Served via Docker or Podman (nginx) — `make up` auto-detects which.
 
@@ -8,21 +8,13 @@ Single self-contained `index.html`. No build step, no framework. Served via Dock
 
 - **100 × 100** pointy-top hex grid (tune `COLS`/`ROWS`/`S` at the top of the script).
 - **Image background** with opacity / scale / nudge to align it under the grid before tracing.
-- **Terrain with scales** (two levels each, light → heavy):
-  - Trees → Forest
-  - Grasslands → Hills
-  - Plains → Desert
-  - Small mountain → Large mountain
-  - Shallow water → Deep water
-  - Shallow lava → Deep lava
-  - plus single-level Marsh and Fog (unknown / shaded-out regions).
-- **Merging tiles.** Water and lava merge across shared edges into continuous bodies (shallow and deep keep a depth-contour line between them).
-- **Rivers are overlays, not tiles.** A river hex connects its centre to the midpoint of every edge it shares with another river hex — so rivers flow through tiles and **terminate at the centre** when a tile has only one river neighbour.
-- **Settlements.** Villages are isolated buildings; **Cities merge** across shared edges like water (connected city tiles form one urban mass).
-- **Entities:** `?` point-of-interest, skull, and cave markers.
+- **Terrain** (two levels each, light → heavy): trees→forest, grasslands→hills, plains→desert, small→large mountain, shallow→deep water, shallow→deep lava; plus single-level marsh and fog. Water and lava merge across shared edges into continuous bodies (shallow↔deep keeps a contour line).
+- **Rivers** (water *or* lava) are overlays, not tiles. A river hex connects its centre to the midpoint of every edge it shares with another river of the **same type**, so a single-neighbour river terminates at the centre.
+- **Points of interest:** Town, City, Danger (skull), Dungeon (cave), Unknown (`?`). Cities merge across shared edges like water; the rest are standalone markers.
+- **Text labels:** black text on a white rounded box, adjustable font size. Click to place, click an existing label to delete.
 - **Zoom & pan** — wheel-zoom to cursor, right/middle-drag or hold `Space` to pan.
 - **Drag-paint** with line-fill so fast strokes leave no gaps.
-- **Autosave** to `localStorage`; **export** a clean PNG (no background) and **save/load** terrain data as JSON.
+- **Autosave** to `localStorage`; **export** a clean PNG (no background) and **save/load** as JSON.
 
 ## Quick start
 
@@ -45,7 +37,7 @@ make serve       # python static server
 | Paint | Left-drag |
 | Pan   | Right-drag, middle-drag, or hold `Space` + drag |
 | Zoom  | Mouse wheel (toward cursor) |
-| Tools | `1`–`9` terrain · `0` erase · `r` river · `v` village · `c` city · `p` ? · `k` skull · `e` cave |
+| Tools | `1`–`9` terrain · `0` erase · `r`/`l` water/lava river · `t` town · `c` city · `d` dungeon · `g` danger · `u` unknown · `x` text |
 
 ## Status
 

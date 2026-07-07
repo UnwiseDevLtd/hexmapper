@@ -39,8 +39,7 @@
   #stage.panning:active{cursor:grabbing}
   canvas{position:absolute;inset:0;display:block;touch-action:none}
   h3{margin:14px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
-  .grp{margin-bottom:2px}
-  .grp > .gh{font-size:10px;color:var(--dim);margin:6px 0 3px;text-transform:uppercase;letter-spacing:.06em}
+  .gh{font-size:10px;color:var(--dim);margin:6px 0 3px;text-transform:uppercase;letter-spacing:.06em}
   .tools{display:grid;grid-template-columns:1fr 1fr;gap:5px}
   .tool{display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 6px;cursor:pointer;text-align:left;color:var(--tx)}
   .tool:hover{border-color:var(--acc)}
@@ -51,6 +50,8 @@
   .tool .k{margin-left:auto;font-size:9px;color:var(--dim);background:#1b1d22;border-radius:3px;padding:1px 4px;flex:0 0 auto}
   label{display:block;margin:8px 0 3px;color:var(--dim);font-size:11px}
   input[type=range]{width:100%}
+  input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit}
+  input[type=text]:focus{outline:none;border-color:var(--acc)}
   .row{display:flex;gap:6px;flex-wrap:wrap}
   button.act{background:var(--panel2);border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:12px;flex:1}
   button.act:hover{border-color:var(--acc)}
@@ -68,6 +69,12 @@
 
 <div id="side">
   <div id="palette"></div>
+
+  <h3>Text label</h3>
+  <input id="txt" type="text" placeholder="Label text…" autocomplete="off">
+  <label>Font size <span id="tsv">14</span></label>
+  <input id="txtsize" type="range" min="6" max="48" value="14">
+  <div class="hint">Select the Text tool, then click the map to place. Click an existing label to delete it.</div>
 
   <h3>Background image</h3>
   <label class="filebtn" for="bgfile" id="bglabel">Upload map image…</label>
@@ -111,7 +118,7 @@
     <b>Left-drag</b> paint &nbsp;·&nbsp; <b>Right/Middle-drag</b> pan<br>
     <b>Wheel</b> zoom to cursor &nbsp;·&nbsp; hold <code>Space</code> to pan<br>
     Keys: <code>1</code>–<code>9</code> terrain · <code>0</code> erase<br>
-    <code>r</code> river <code>v</code> village <code>c</code> city <code>p</code> ? <code>k</code> skull <code>e</code> cave
+    <code>r</code>/<code>l</code> water/lava river · <code>t</code> town <code>c</code> city <code>d</code> dungeon <code>g</code> danger <code>u</code> unknown · <code>x</code> text
   </div>
   <div class="hint" style="margin-top:8px;color:var(--acc2)">Autosaves to this browser.</div>
 </div>
@@ -132,7 +139,7 @@
 <script>
 "use strict";
 const COLS=100, ROWS=100;
-const S=24;                                  // hex circumradius (world px)
+const S=24;
 const W=Math.sqrt(3)*S;
 const PAD=S;
 const GRID_W=PAD*2 + W*COLS + W/2;
@@ -140,8 +147,7 @@ const GRID_H=PAD*2 + S + 1.5*S*(ROWS-1) + S;
 const idx=(c,r)=>r*COLS+c;
 const inB=(c,r)=>c>=0&&c<COLS&&r>=0&&r<ROWS;
 
-// ---- terrain ids ----
-// water(9,10) + lava(11,12) merge across shared edges; everything else is gridded.
+// ---- terrain ----
 const TERR={
   1:{label:"Trees",         fill:"#6fb249", sym:"#163b1c"},
   2:{label:"Forest",        fill:"#2f6e2f", sym:"#0a210d"},
@@ -167,23 +173,31 @@ const GROUPS=[
  {name:"Lava",        items:[11,12]},
  {name:"Wet / hidden",items:[13,14]},
 ];
-// overlay tools
-const OV=[
- {kind:"river",  label:"River",   key:"r", sw:"#2f7ab8"},
- {kind:"entity", id:1, label:"Village", key:"v", sw:"#ffd479"},
- {kind:"entity", id:2, label:"City",    key:"c", sw:"#6f6f78"},
- {kind:"entity", id:3, label:"? PoI",   key:"p", sw:"#ffe14d"},
- {kind:"entity", id:4, label:"Skull",   key:"k", sw:"#eeeeee"},
- {kind:"entity", id:5, label:"Cave",    key:"e", sw:"#5b524a"},
+// rivers carry a type: 1 water, 2 lava — same edge rules, different colour
+const WATER_RIVER="#2f7ab8", LAVA_RIVER="#ef6a2a";
+const RIVER_TOOLS=[
+ {kind:"river",type:1,label:"Water river",key:"r",sw:WATER_RIVER},
+ {kind:"river",type:2,label:"Lava river",key:"l",sw:LAVA_RIVER},
 ];
-const ENT_NAME={1:"Village",2:"City",3:"? PoI",4:"Skull",5:"Cave"};
+// points of interest
+const ENT_NAME={1:"Town",2:"City",3:"Unknown",4:"Danger",5:"Dungeon"};
+const POI_TOOLS=[
+ {kind:"entity",id:1,label:"Town",    key:"t",sw:"#ffd479"},
+ {kind:"entity",id:2,label:"City",    key:"c",sw:"#6f6f78"},
+ {kind:"entity",id:5,label:"Dungeon", key:"d",sw:"#5b524a"},
+ {kind:"entity",id:4,label:"Danger",  key:"g",sw:"#eeeeee"},
+ {kind:"entity",id:3,label:"Unknown", key:"u",sw:"#ffe14d"},
+];
+const TEXT_TOOL={kind:"text",label:"Text",key:"x",sw:"#ffffff"};
+const ERASE_TOOL={kind:"erase",label:"Erase",key:"0",sw:"repeating-linear-gradient(45deg,#333,#333 3px,#444 3px,#444 6px)"};
 
 let active={kind:"terrain",id:1};
 
 // ---- data ----
 const terrain=new Uint8Array(ROWS*COLS);
-const rivers =new Uint8Array(ROWS*COLS);
-const entity =new Uint8Array(ROWS*COLS); // 0 none,1 village,2 city,3 poi,4 skull,5 cave
+const rivers =new Uint8Array(ROWS*COLS); // 0 none, 1 water, 2 lava
+const entity =new Uint8Array(ROWS*COLS); // 0 none, 1 town, 2 city, 3 unknown, 4 danger, 5 dungeon
+let texts=[]; // {x,y,s,size} in world coords
 
 // ---- canvas / camera ----
 const cv=document.getElementById("cv");
@@ -195,6 +209,7 @@ const wctx=world.getContext("2d");
 let cam={x:0,y:0,z:1};
 let bgImg=null,bgOp=0.45,bgScaleMul=1,bgOffX=0,bgOffY=0;
 let dirty=true, hover={c:-1,r:-1};
+let labelText="", fontSize=14;
 
 function resize(){
   const dpr=Math.min(window.devicePixelRatio||1,2);
@@ -207,13 +222,11 @@ function resize(){
 window.addEventListener("resize",resize);
 
 // ---- hex math (pointy-top, odd-r offset) ----
-function center(c,r){
-  return [PAD+W/2+W*c+(r&1)*(W/2), PAD+S+1.5*S*r];
-}
+function center(c,r){ return [PAD+W/2+W*c+(r&1)*(W/2), PAD+S+1.5*S*r]; }
 const VERTS=[[0,-S],[W/2,-S/2],[W/2,S/2],[0,S],[-W/2,S/2],[-W/2,-S/2]];
 const AXIAL_DIRS=[[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]]; // E,NE,NW,W,SW,SE
-const EDGE_MID =[[W/2,0],[W/4,-3*S/4],[-W/4,-3*S/4],[-W/2,0],[-W/4,3*S/4],[W/4,3*S/4]]; // E,NE,NW,W,SW,SE
-const EDGEDIR=[1,0,5,4,3,2]; // edge i (between VERTS[i],VERTS[i+1]) -> neighbor dir index
+const EDGE_MID =[[W/2,0],[W/4,-3*S/4],[-W/4,-3*S/4],[-W/2,0],[-W/4,3*S/4],[W/4,3*S/4]];
+const EDGEDIR=[1,0,5,4,3,2];
 function neighbors(c,r){
   const q0=c-((r-(r&1))>>1), r0=r, out=[];
   for(const [dq,dr] of AXIAL_DIRS){
@@ -246,8 +259,6 @@ function worldToHex(x,y){
 // ---- merge keys ----
 function tKey(c,r){ const t=terrain[idx(c,r)]; return (t>=9&&t<=12)?("t"+t):null; }
 function cKey(c,r){ return entity[idx(c,r)]===2?"city":null; }
-
-// stroke hex outline, skipping edges shared with a same-key neighbour (merge)
 function outlineHex(g,c,r,keyFn){
   const [cx,cy]=center(c,r), self=keyFn(c,r), ns=neighbors(c,r);
   if(!self){ hexPath(g,cx,cy); g.stroke(); return; }
@@ -355,9 +366,31 @@ function drawEntity(g,type,cx,cy){
   if(type===4){ drawSkull(g,cx,cy); return; }
   if(type===5){ drawCave(g,cx,cy); return; }
 }
-const RIVER_COLOR="#2f7ab8";
+function roundRect(g,x,y,w,h,r){
+  g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
+}
+function drawTexts(g){
+  g.save(); g.textAlign="center"; g.textBaseline="middle";
+  for(const t of texts){
+    g.font=`${t.size}px ui-sans-serif,system-ui,sans-serif`;
+    const w=g.measureText(t.s).width, pad=t.size*0.25, h=t.size*1.35;
+    g.fillStyle="#fff"; roundRect(g,t.x-w/2-pad,t.y-h/2,w+2*pad,h,t.size*0.2); g.fill();
+    g.strokeStyle="rgba(0,0,0,0.18)"; g.lineWidth=1; g.stroke();
+    g.fillStyle="#000"; g.fillText(t.s,t.x,t.y);
+  }
+  g.restore();
+}
+function hitText(wx,wy){
+  wctx.save(); wctx.textAlign="center"; wctx.textBaseline="middle";
+  for(let i=texts.length-1;i>=0;i--){
+    const t=texts[i]; wctx.font=`${t.size}px ui-sans-serif,system-ui,sans-serif`;
+    const w=wctx.measureText(t.s).width, pad=t.size*0.25, h=t.size*1.35;
+    if(wx>=t.x-w/2-pad&&wx<=t.x+w/2+pad&&wy>=t.y-h/2&&wy<=t.y+h/2){ wctx.restore(); return i; }
+  }
+  wctx.restore(); return -1;
+}
 
-// ---- build the world canvas ----
+// ---- build world canvas ----
 function buildWorld(includeBg){
   const g=wctx; g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,world.width,world.height);
   if(includeBg&&bgImg){
@@ -366,20 +399,17 @@ function buildWorld(includeBg){
     const dx=(GRID_W-dw)/2+bgOffX, dy=(GRID_H-dh)/2+bgOffY;
     g.globalAlpha=bgOp; g.drawImage(bgImg,dx,dy,dw,dh); g.globalAlpha=1;
   }
-  // terrain fills
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const t=terrain[idx(c,r)]; if(!t) continue;
     const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill();
   }
-  // grid outlines (merge-aware for water/lava)
   g.strokeStyle="rgba(0,0,0,0.32)"; g.lineWidth=1;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
-  // terrain symbols
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const t=terrain[idx(c,r)]; if(!t) continue;
     const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy);
   }
-  // city overlay (merges across shared edges)
+  // city overlay (merges)
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     if(entity[idx(c,r)]!==2) continue;
     const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle="#6f6f78"; g.fill();
@@ -387,19 +417,21 @@ function buildWorld(includeBg){
   g.strokeStyle="rgba(0,0,0,0.5)"; g.lineWidth=1.2;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2) outlineHex(g,c,r,cKey);
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2){ const [cx,cy]=center(c,r); cityTexture(g,cx,cy); }
-  // rivers: connect each river tile's centre to the midpoint of every shared river edge
-  g.save(); g.strokeStyle=RIVER_COLOR; g.lineWidth=S*0.18; g.lineCap="round"; g.lineJoin="round";
+  // rivers (water + lava): connect centre -> shared-edge midpoint, same type only
+  g.save(); g.lineCap="round"; g.lineJoin="round"; g.lineWidth=S*0.18;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    if(!rivers[idx(c,r)]) continue;
+    const T=rivers[idx(c,r)]; if(!T) continue;
+    g.strokeStyle = T===1?WATER_RIVER:LAVA_RIVER;
     const [cx,cy]=center(c,r), ns=neighbors(c,r);
-    for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(!inB(nc,nr)||!rivers[idx(nc,nr)]) continue; const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); }
+    for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(!inB(nc,nr)||rivers[idx(nc,nr)]!==T) continue; const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); }
   }
   g.restore();
-  // other entities (village, poi, skull, cave)
+  // other PoIs
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const e=entity[idx(c,r)]; if(e===0||e===2) continue;
     const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy);
   }
+  drawTexts(g);
   g.strokeStyle="rgba(255,255,255,0.15)"; g.lineWidth=2; g.strokeRect(0,0,GRID_W,GRID_H);
 }
 
@@ -415,7 +447,7 @@ function render(){
     const [cx,cy]=center(hover.c,hover.r);
     const sx=cx*cam.z+cam.x, sy=cy*cam.z+cam.y;
     ctx.save(); ctx.translate(sx,sy); ctx.scale(cam.z,cam.z);
-    drawPreview(ctx); 
+    drawPreview(ctx);
     hexPath(ctx,0,0); ctx.strokeStyle="#fff"; ctx.lineWidth=1.5/cam.z; ctx.stroke();
     ctx.restore();
   }
@@ -423,16 +455,22 @@ function render(){
 function drawPreview(g){
   g.globalAlpha=0.5;
   if(active.kind==="terrain"){
-    const t=active.id; hexPath(g,0,0); g.fillStyle=TERR[t].fill; g.fill();
-    drawTerrain(g,t,0,0);
+    const t=active.id; hexPath(g,0,0); g.fillStyle=TERR[t].fill; g.fill(); drawTerrain(g,t,0,0);
   } else if(active.kind==="river"){
-    g.strokeStyle=RIVER_COLOR; g.lineWidth=S*0.18; g.lineCap="round";
+    const col=active.type===1?WATER_RIVER:LAVA_RIVER;
+    g.strokeStyle=col; g.lineWidth=S*0.18; g.lineCap="round";
     const ns=neighbors(hover.c,hover.r);
-    for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(inB(nc,nr)&&rivers[idx(nc,nr)]){ const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(0,0); g.lineTo(mx,my); g.stroke(); } }
-    g.fillStyle=RIVER_COLOR; g.beginPath(); g.arc(0,0,S*0.12,0,7); g.fill();
+    for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(inB(nc,nr)&&rivers[idx(nc,nr)]===active.type){ const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(0,0); g.lineTo(mx,my); g.stroke(); } }
+    g.fillStyle=col; g.beginPath(); g.arc(0,0,S*0.12,0,7); g.fill();
   } else if(active.kind==="entity"){
     if(active.id===2){ hexPath(g,0,0); g.fillStyle="#6f6f78"; g.fill(); }
     drawEntity(g,active.id,0,0);
+  } else if(active.kind==="text"&&labelText.trim()){
+    g.font=`${fontSize}px ui-sans-serif,system-ui,sans-serif`;
+    g.textAlign="center"; g.textBaseline="middle";
+    const w=g.measureText(labelText).width, pad=fontSize*0.25, h=fontSize*1.35;
+    g.fillStyle="rgba(255,255,255,0.7)"; roundRect(g,-w/2-pad,-h/2,w+2*pad,h,fontSize*0.2); g.fill();
+    g.fillStyle="#000"; g.fillText(labelText,0,0);
   }
   g.globalAlpha=1;
 }
@@ -451,12 +489,15 @@ function fitGrid(){
 }
 
 // ---- painting ----
-let strokeVal=1; // resolved at pointerdown (river toggle value)
+let strokeVal=0;
 function paintHex(c,r){
   if(!inB(c,r)) return;
   const i=idx(c,r);
   switch(active.kind){
-    case "erase":   terrain[i]=0; rivers[i]=0; entity[i]=0; break;
+    case "erase":
+      terrain[i]=0; rivers[i]=0; entity[i]=0;
+      texts=texts.filter(t=>{ const [tc,tr]=worldToHex(t.x,t.y); return !(tc===c&&tr===r); });
+      break;
     case "terrain": terrain[i]=active.id; break;
     case "river":   rivers[i]=strokeVal; break;
     case "entity":  entity[i]=active.id; break;
@@ -473,6 +514,14 @@ function paintLine(c0,r0,c1,r1){
 let mode=null,lastHex=null,panStart=null,space=false;
 stage.addEventListener("contextmenu",e=>e.preventDefault());
 stage.addEventListener("pointerdown",e=>{
+  if(active.kind==="text"){
+    const [wx,wy]=clientToWorld(e.clientX,e.clientY);
+    const hi=hitText(wx,wy);
+    if(hi>=0) texts.splice(hi,1);
+    else if(labelText.trim()) texts.push({x:wx,y:wy,s:labelText,size:fontSize});
+    dirty=true; scheduleSave(); render();
+    return;
+  }
   stage.setPointerCapture(e.pointerId);
   if(e.button===1||e.button===2||space){
     mode="pan"; panStart={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y}; stage.classList.add("panning"); return;
@@ -480,7 +529,7 @@ stage.addEventListener("pointerdown",e=>{
   mode="paint";
   const [wx,wy]=clientToWorld(e.clientX,e.clientY);
   const [c,r]=worldToHex(wx,wy);
-  if(inB(c,r)&&active.kind==="river") strokeVal=rivers[idx(c,r)]?0:1; else strokeVal=1;
+  if(active.kind==="river"&&inB(c,r)) strokeVal = rivers[idx(c,r)]===active.type?0:active.type; else strokeVal=0;
   paintHex(c,r); lastHex={c,r}; scheduleSave(); render();
 });
 stage.addEventListener("pointermove",e=>{
@@ -500,54 +549,71 @@ stage.addEventListener("wheel",e=>{ e.preventDefault(); zoomAt(e.clientX,e.clien
 window.addEventListener("keydown",e=>{
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
   if(e.code==="Space"){ space=true; stage.classList.add("panning"); return; }
-  if(e.key>="1"&&e.key<="9"){ const id=+e.key; if(TERR[id]) selectTool({kind:"terrain",id}); }
-  else if(e.key==="0") selectTool({kind:"erase"});
-  else { const o=OV.find(o=>o.key===e.key.toLowerCase()); if(o) selectTool(o.kind==="entity"?{kind:"entity",id:o.id}:{kind:"river"}); }
+  const k=e.key.toLowerCase();
+  if(k>="1"&&k<="9"){ const id=+k; if(TERR[id]) selectTool({kind:"terrain",id}); return; }
+  if(k==="0"){ selectTool({kind:"erase"}); return; }
+  const pool=[...RIVER_TOOLS,...POI_TOOLS,TEXT_TOOL];
+  const d=pool.find(o=>o.key===k);
+  if(d) selectTool(d);
 });
 window.addEventListener("keyup",e=>{ if(e.code==="Space"){ space=false; if(mode!=="pan") stage.classList.remove("panning"); } });
 
 // ---- palette ----
 const palEl=document.getElementById("palette");
-function selectTool(a){ active=a; reflectTool(); render(); }
-function toolName(a){ if(a.kind==="terrain") return TERR[a.id].label; if(a.kind==="entity") return ENT_NAME[a.id]; if(a.kind==="river") return "River"; return "Erase"; }
+function selectTool(d){
+  if(d.kind==="terrain") active={kind:"terrain",id:d.id};
+  else if(d.kind==="river") active={kind:"river",type:d.type};
+  else if(d.kind==="entity") active={kind:"entity",id:d.id};
+  else active={kind:d.kind};
+  reflectTool(); render();
+}
+function toolName(a){
+  if(a.kind==="terrain") return TERR[a.id].label;
+  if(a.kind==="river") return a.type===1?"Water river":"Lava river";
+  if(a.kind==="entity") return ENT_NAME[a.id];
+  if(a.kind==="text") return "Text";
+  return "Erase";
+}
+function matchActive(d){
+  const a=active;
+  if(d.kind==="terrain") return a.kind==="terrain"&&a.id===d.id;
+  if(d.kind==="river")   return a.kind==="river"&&a.type===d.type;
+  if(d.kind==="entity")  return a.kind==="entity"&&a.id===d.id;
+  return a.kind===d.kind; // text / erase
+}
 function reflectTool(){
-  document.querySelectorAll(".tool").forEach(b=>{
-    const k=b.dataset.k, t=JSON.parse(b.dataset.t);
-    const on=(t.kind==="terrain"&&active.kind==="terrain"&&active.id===t.id)||(t.kind!=="terrain"&&active.kind===t.kind&&(t.kind!=="entity"||active.id===t.id));
-    b.classList.toggle("on",on);
-  });
+  document.querySelectorAll(".tool").forEach(b=>{ const d=JSON.parse(b.dataset.d); b.classList.toggle("on",matchActive(d)); });
   document.getElementById("curtool").textContent=toolName(active);
 }
-function swatchFor(t){
-  if(t.kind==="terrain") return `background:${TERR[t.id].fill}`;
-  if(t.kind==="river") return `background:${OV.find(o=>o.kind==="river").sw}`;
-  if(t.kind==="entity") return `background:${OV.find(o=>o.kind==="entity"&&o.id===t.id).sw}`;
-  return `background:repeating-linear-gradient(45deg,#333,#333 3px,#444 3px,#444 6px)`;
-}
-function btn(t,label,key){
+function btn(d){
   const b=document.createElement("button");
-  b.className="tool"; b.dataset.k=key; b.dataset.t=JSON.stringify(t);
-  b.innerHTML=`<span class="sw" style="${swatchFor(t)}"></span><span class="t"><span>${label}</span></span><span class="k">${key}</span>`;
-  b.onclick=()=>selectTool(t);
+  b.className="tool"; b.dataset.d=JSON.stringify(d);
+  b.innerHTML=`<span class="sw" style="background:${d.sw}"></span><span class="t"><span>${d.label}</span></span>${d.key?`<span class="k">${d.key}</span>`:""}`;
+  b.onclick=()=>selectTool(d);
   return b;
 }
+function grp(name,tools,cols){
+  const w=document.createElement("div");
+  if(name){ const h=document.createElement("div"); h.className="gh"; h.textContent=name; w.appendChild(h); }
+  const gw=document.createElement("div"); gw.className="tools";
+  tools.forEach(d=> gw.appendChild(btn(d)));
+  w.appendChild(gw); palEl.appendChild(w);
+}
+function h3(text){ const h=document.createElement("h3"); h.textContent=text; palEl.appendChild(h); }
 function buildPalette(){
   palEl.innerHTML="";
-  for(const grp of GROUPS){
-    const w=document.createElement("div"); w.className="grp";
-    const h=document.createElement("div"); h.className="gh"; h.textContent=grp.name; w.appendChild(h);
+  h3("Terrain");
+  for(const g of GROUPS){
+    const w=document.createElement("div");
+    const h=document.createElement("div"); h.className="gh"; h.textContent=g.name; w.appendChild(h);
     const gw=document.createElement("div"); gw.className="tools";
-    grp.items.forEach((id,i)=>{ gw.appendChild(btn({kind:"terrain",id},TERR[id].label, id<=9?String(id):"")); });
+    g.items.forEach(id=> gw.appendChild(btn({kind:"terrain",id,label:TERR[id].label,sw:TERR[id].fill,key:id<=9?String(id):""})));
     w.appendChild(gw); palEl.appendChild(w);
   }
-  const ow=document.createElement("div"); ow.className="grp";
-  const oh=document.createElement("div"); oh.className="gh"; oh.textContent="Overlays"; ow.appendChild(oh);
-  const ogw=document.createElement("div"); ogw.className="tools";
-  OV.forEach(o=> ogw.appendChild(btn(o.kind==="entity"?{kind:"entity",id:o.id}:{kind:"river"},o.label,o.key)));
-  ow.appendChild(ogw); palEl.appendChild(ow);
-  const ew=document.createElement("div"); ew.className="grp";
-  const egw=document.createElement("div"); egw.className="tools";
-  egw.appendChild(btn({kind:"erase"},"Erase","0")); ew.appendChild(egw); palEl.appendChild(ew);
+  h3("Rivers"); grp(null,RIVER_TOOLS);
+  h3("Points of interest"); grp(null,POI_TOOLS);
+  h3("Text"); grp(null,[TEXT_TOOL]);
+  h3("Edit"); grp(null,[ERASE_TOOL]);
   reflectTool();
 }
 
@@ -573,6 +639,9 @@ stage.addEventListener("dragover",e=>{e.preventDefault();stage.classList.add("dr
 stage.addEventListener("dragleave",()=>stage.classList.remove("drag"));
 stage.addEventListener("drop",e=>{ e.preventDefault(); stage.classList.remove("drag"); const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith("image")) loadImage(f); });
 
+document.getElementById("txt").addEventListener("input",e=>{ labelText=e.target.value; if(active.kind==="text") render(); });
+document.getElementById("txtsize").addEventListener("input",e=>{ fontSize=+e.target.value; document.getElementById("tsv").textContent=e.target.value; if(active.kind==="text") render(); });
+
 // ---- view buttons ----
 const ctr=()=>({l:cv.getBoundingClientRect().left+cv.clientWidth/2,t:cv.getBoundingClientRect().top+cv.clientHeight/2});
 document.getElementById("zin").onclick=()=>{const c=ctr();zoomAt(c.l,c.t,1.25);};
@@ -591,36 +660,37 @@ function exportDraw(g){
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ if(entity[idx(c,r)]!==2) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle="#6f6f78"; g.fill(); }
   g.strokeStyle="rgba(0,0,0,0.5)"; g.lineWidth=1.2; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2) outlineHex(g,c,r,cKey);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(entity[idx(c,r)]===2){ const [cx,cy]=center(c,r); cityTexture(g,cx,cy); }
-  g.save(); g.strokeStyle=RIVER_COLOR; g.lineWidth=S*0.18; g.lineCap="round"; g.lineJoin="round";
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ if(!rivers[idx(c,r)]) continue; const [cx,cy]=center(c,r),ns=neighbors(c,r); for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(!inB(nc,nr)||!rivers[idx(nc,nr)]) continue; const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); } }
+  g.save(); g.lineCap="round"; g.lineJoin="round"; g.lineWidth=S*0.18;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const T=rivers[idx(c,r)]; if(!T) continue; g.strokeStyle=T===1?WATER_RIVER:LAVA_RIVER; const [cx,cy]=center(c,r),ns=neighbors(c,r); for(let d=0;d<6;d++){ const [nc,nr]=ns[d]; if(!inB(nc,nr)||rivers[idx(nc,nr)]!==T) continue; const [mx,my]=EDGE_MID[d]; g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+mx,cy+my); g.stroke(); } }
   g.restore();
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const e=entity[idx(c,r)]; if(e===0||e===2) continue; const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy); }
+  drawTexts(g);
 }
 document.getElementById("export").onclick=()=>{
   const t=document.createElement("canvas"); t.width=Math.ceil(GRID_W); t.height=Math.ceil(GRID_H);
   exportDraw(t.getContext("2d")); const a=document.createElement("a"); a.download="hexmap.png"; a.href=t.toDataURL("image/png"); a.click();
 };
 document.getElementById("save").onclick=()=>{
-  const data={v:2,cols:COLS,rows:ROWS,terrain:Array.from(terrain),rivers:Array.from(rivers),entity:Array.from(entity)};
+  const data={v:3,cols:COLS,rows:ROWS,terrain:Array.from(terrain),rivers:Array.from(rivers),entity:Array.from(entity),texts};
   const a=document.createElement("a"); a.download="hexmap.json"; a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:"application/json"})); a.click();
 };
 document.getElementById("loadfile").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return; const rd=new FileReader();
   rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
     if(d.cols!==COLS||d.rows!==ROWS){alert("JSON dimensions don't match 100×100.");return;}
-    terrain.set(d.terrain||[]); rivers.set(d.rivers||[]); entity.set(d.entity||[]);
+    terrain.set(d.terrain||[]); rivers.set(d.rivers||[]); entity.set(d.entity||[]); texts=Array.isArray(d.texts)?d.texts:[];
     dirty=true; render(); scheduleSave(true);
   }catch(err){alert("Invalid JSON: "+err.message);} };
   rd.readAsText(f);
 });
-document.getElementById("clear").onclick=()=>{ if(!confirm("Clear all hexes?")) return; terrain.fill(0); rivers.fill(0); entity.fill(0); dirty=true; render(); scheduleSave(true); };
+document.getElementById("clear").onclick=()=>{ if(!confirm("Clear all hexes?")) return; terrain.fill(0); rivers.fill(0); entity.fill(0); texts=[]; dirty=true; render(); scheduleSave(true); };
 
 // ---- autosave ----
-let saveTimer=null; const STORE="hexmapper.v2";
+let saveTimer=null; const STORE="hexmapper.v3";
 function scheduleSave(force){ if(saveTimer) clearTimeout(saveTimer); saveTimer=setTimeout(doSave,force?0:500); }
-function doSave(){ try{ localStorage.setItem(STORE,JSON.stringify({terrain:Array.from(terrain),rivers:Array.from(rivers),entity:Array.from(entity),cam})); }catch(_){} }
+function doSave(){ try{ localStorage.setItem(STORE,JSON.stringify({terrain:Array.from(terrain),rivers:Array.from(rivers),entity:Array.from(entity),texts,cam})); }catch(_){} }
 function loadSaved(){ try{ const s=localStorage.getItem(STORE); if(!s) return; const d=JSON.parse(s);
-  if(d.terrain) terrain.set(d.terrain); if(d.rivers) rivers.set(d.rivers); if(d.entity) entity.set(d.entity);
+  if(d.terrain) terrain.set(d.terrain); if(d.rivers) rivers.set(d.rivers); if(d.entity) entity.set(d.entity); if(d.texts) texts=d.texts;
   if(d.cam){cam.x=d.cam.x;cam.y=d.cam.y;cam.z=d.cam.z;} }catch(_){} }
 setInterval(()=>{document.getElementById("curzoom").textContent=Math.round(cam.z*100)+"%";},200);
 
