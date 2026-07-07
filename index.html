@@ -22,7 +22,6 @@
   #stage.textmode{cursor:text}
   canvas{position:absolute;inset:0;display:block;touch-action:none}
   h3{margin:14px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
-  .seg{font-size:10px;color:var(--dim);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.06em}
   .tools{display:grid;grid-template-columns:1fr;gap:4px}
   .tool{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;cursor:pointer;text-align:left;color:var(--tx);width:100%}
   .tool:hover{border-color:var(--acc)}
@@ -49,13 +48,15 @@
   code{background:#1b1d22;padding:1px 5px;border-radius:3px;color:var(--acc2)}
   .chk{display:flex;align-items:center;gap:8px;color:var(--tx);font-size:12px;cursor:pointer}
   .chk input{margin:0}
-  #settings{margin-top:12px}
-  .tabs{display:flex;gap:0;background:var(--panel2);border:1px solid var(--line);border-radius:8px 8px 0 0;overflow:hidden}
-  .tabs button{flex:1;background:transparent;border:none;color:var(--dim);padding:8px 4px;font:inherit;font-size:11px;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;border-bottom:2px solid transparent}
-  .tabs button:hover{color:var(--tx)}
-  .tabs button.on{color:var(--tx);background:#22252d;border-bottom-color:var(--acc)}
-  .pane{display:none;background:#22252d;border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;padding:10px}
-  .pane.on{display:block}
+  /* collapsibles */
+  .collapse{margin-bottom:6px}
+  .collapse-head{display:flex;align-items:center;gap:8px;width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;cursor:pointer;color:var(--tx);font:inherit;font-size:11px;text-transform:uppercase;letter-spacing:.06em;text-align:left}
+  .collapse-head:hover{border-color:var(--acc)}
+  .collapse-head .ttl{flex:1}
+  .collapse-head .caret{color:var(--dim);transition:transform .15s;transform:rotate(0deg)}
+  .collapse.open .collapse-head .caret{transform:rotate(90deg)}
+  .collapse-body{display:none;padding:8px 2px 2px}
+  .collapse.open .collapse-body{display:block}
   #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(40,80,140,.25);border:2px dashed var(--acc);pointer-events:none;font-size:16px;color:var(--tx)}
   #stage.drag #drop{display:flex}
 </style>
@@ -77,87 +78,86 @@
   </div>
 
   <div id="settings">
-    <div class="tabs">
-      <button data-tab="bg" class="on">Background</button>
-      <button data-tab="ex">Export</button>
-      <button data-tab="set">Settings</button>
-    </div>
-
-    <div class="pane on" data-pane="bg">
-      <label class="filebtn" for="bgfile" id="bglabel">Upload map image…</label>
-      <input type="file" id="bgfile" accept="image/*">
-      <div class="hint" id="bgstatus">No background loaded.</div>
-      <label>Opacity <span id="opv">45%</span></label>
-      <input type="range" id="bgop" min="0" max="100" value="45">
-      <label>Scale <span id="scv">100%</span></label>
-      <input type="range" id="bgscale" min="20" max="400" value="100">
-      <label>Nudge X / Y</label>
-      <div class="row">
-        <input type="range" id="bgx" min="-400" max="400" value="0" style="flex:1">
-        <input type="range" id="bgy" min="-400" max="400" value="0" style="flex:1">
-      </div>
-      <div class="row" style="margin-top:6px">
-        <button class="act" id="bgfit">Fit to grid</button>
-        <button class="act" id="bgclear">Remove</button>
+    <div class="collapse">
+      <button class="collapse-head" type="button"><span class="ttl">Background</span><span class="caret">▸</span></button>
+      <div class="collapse-body">
+        <label class="filebtn" for="bgfile" id="bglabel">Upload map image…</label>
+        <input type="file" id="bgfile" accept="image/*">
+        <div class="hint" id="bgstatus">No background loaded.</div>
+        <label>Opacity <span id="opv">45%</span></label>
+        <input type="range" id="bgop" min="0" max="100" value="45">
+        <label>Scale <span id="scv">100%</span></label>
+        <input type="range" id="bgscale" min="20" max="400" value="100">
+        <label>Nudge X / Y</label>
+        <div class="row">
+          <input type="range" id="bgx" min="-400" max="400" value="0" style="flex:1">
+          <input type="range" id="bgy" min="-400" max="400" value="0" style="flex:1">
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button class="act" id="bgfit">Fit to grid</button>
+          <button class="act" id="bgclear">Remove</button>
+        </div>
       </div>
     </div>
 
-    <div class="pane" data-pane="ex">
-      <div class="row">
-        <button class="act" id="export">Export PNG</button>
-        <button class="act" id="save">Save JSON</button>
-      </div>
-      <label class="filebtn" for="loadfile" style="margin-top:6px">Load JSON…</label>
-      <input type="file" id="loadfile" accept="application/json,.json">
-      <div class="row" style="margin-top:10px">
-        <button class="act danger" id="clear">Clear all</button>
+    <div class="collapse">
+      <button class="collapse-head" type="button"><span class="ttl">Export</span><span class="caret">▸</span></button>
+      <div class="collapse-body">
+        <div class="row">
+          <button class="act" id="export">Export PNG</button>
+          <button class="act" id="save">Save JSON</button>
+        </div>
+        <label class="filebtn" for="loadfile" style="margin-top:6px">Load JSON…</label>
+        <input type="file" id="loadfile" accept="application/json,.json">
+        <div class="row" style="margin-top:10px">
+          <button class="act danger" id="clear">Clear all</button>
+        </div>
       </div>
     </div>
 
-    <div class="pane" data-pane="set">
-      <div class="seg">Paint</div>
-      <div class="row tight">
-        <button class="act on" id="pmline">Line (drag)</button>
-        <button class="act" id="pmfill">Fill (bucket)</button>
+    <div class="collapse">
+      <button class="collapse-head" type="button"><span class="ttl">Settings</span><span class="caret">▸</span></button>
+      <div class="collapse-body">
+        <label>Paint</label>
+        <div class="row tight">
+          <button class="act on" id="pmline">Line (drag)</button>
+          <button class="act" id="pmfill">Fill (bucket)</button>
+        </div>
+        <div class="hint">Fill floods connected tiles matching the one you click.</div>
+        <label>Grid</label>
+        <div class="row tight">
+          <label style="margin:0;flex:1">Cols <input type="number" id="colsin" value="100" min="1" max="400" style="margin-top:3px"></label>
+          <label style="margin:0;flex:1">Rows <input type="number" id="rowsin" value="100" min="1" max="400" style="margin-top:3px"></label>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button class="act" id="dimapply">Apply size</button>
+          <button class="act" id="rotate">Rotate grid</button>
+        </div>
+        <div class="hint">Rotate swaps axes (vertical ↔ horizontal); rows/cols auto-adjust.</div>
+        <label>Hex IDs</label>
+        <label class="chk"><input type="checkbox" id="idshow"> Show IDs (e.g. BC-23)</label>
+        <label>Size <span id="idsv">9</span></label>
+        <input type="range" id="idsz" min="6" max="20" value="9">
+        <div class="row tight" style="margin-top:6px">
+          <button class="act" id="idbg">BG: none</button>
+          <button class="act" id="idpos">Pos: center</button>
+        </div>
+        <label>View</label>
+        <div class="row tight">
+          <button class="act" id="zin">Zoom +</button>
+          <button class="act" id="zout">Zoom −</button>
+        </div>
+        <div class="row tight" style="margin-top:4px">
+          <button class="act" id="zfit">Fit grid</button>
+          <button class="act" id="z1">1:1</button>
+        </div>
+        <label>History</label>
+        <div class="row tight">
+          <button class="act" id="undo" disabled>↶ Undo</button>
+          <button class="act" id="redo" disabled>↷ Redo</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Features are additive — left-click adds, right-click removes. <code>Ctrl+Z</code> / <code>Ctrl+Shift+Z</code>.</div>
       </div>
-      <div class="hint">Fill floods connected tiles matching the one you click — trace an outline, then fill inside.</div>
-
-      <div class="seg">Grid</div>
-      <div class="row tight">
-        <label style="margin:0;flex:1">Cols <input type="number" id="colsin" value="100" min="1" max="400" style="margin-top:3px"></label>
-        <label style="margin:0;flex:1">Rows <input type="number" id="rowsin" value="100" min="1" max="400" style="margin-top:3px"></label>
-      </div>
-      <div class="row" style="margin-top:6px">
-        <button class="act" id="dimapply">Apply grid size</button>
-        <button class="act" id="rotate">Rotate 60°</button>
-      </div>
-      <div class="hint">Resize preserves the overlapping region. Rotate turns the whole map 60° (hex grids rotate in 60° steps).</div>
-
-      <div class="seg">Hex IDs</div>
-      <label class="chk"><input type="checkbox" id="idshow"> Show IDs (e.g. BC-23)</label>
-      <label>Size <span id="idsv">9</span></label>
-      <input type="range" id="idsz" min="6" max="20" value="9">
-      <div class="row tight" style="margin-top:6px">
-        <button class="act" id="idbg">BG: none</button>
-        <button class="act" id="idpos">Pos: center</button>
-      </div>
-
-      <div class="seg">View</div>
-      <div class="row tight">
-        <button class="act" id="zin">Zoom +</button>
-        <button class="act" id="zout">Zoom −</button>
-      </div>
-      <div class="row tight" style="margin-top:4px">
-        <button class="act" id="zfit">Fit grid</button>
-        <button class="act" id="z1">1:1</button>
-      </div>
-
-      <div class="seg">History</div>
-      <div class="row tight">
-        <button class="act" id="undo" disabled>↶ Undo</button>
-        <button class="act" id="redo" disabled>↷ Redo</button>
-      </div>
-      <div class="hint" style="margin-top:8px">Rivers, roads &amp; vegetation are additive — left-click adds, right-click removes. <code>Ctrl+Z</code> / <code>Ctrl+Shift+Z</code>.</div>
     </div>
   </div>
 </div>

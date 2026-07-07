@@ -26,9 +26,21 @@ function matchActive(d){
   if(d.kind==="entity")  return a.kind==="entity"&&a.id===d.id;
   return a.kind===d.kind;
 }
+function activeSection(){
+  const k=active.kind;
+  if(k==="text") return "text";
+  if(k==="terrain") return "terrain";
+  if(k==="erase") return "edit";
+  return "features";
+}
+function openActiveSection(){
+  const s=activeSection();
+  palEl.querySelectorAll(":scope > .collapse").forEach(c=>c.classList.toggle("open", c.dataset.section===s));
+}
 function reflectTool(){
   document.querySelectorAll(".tool").forEach(b=>{ const d=JSON.parse(b.dataset.d); b.classList.toggle("on",matchActive(d)); });
   document.getElementById("curtool").textContent=toolName(active);
+  openActiveSection();
 }
 function btn(d){
   const b=document.createElement("button");
@@ -37,14 +49,23 @@ function btn(d){
   b.onclick=()=>selectTool(d);
   return b;
 }
-function h3(text){ const h=document.createElement("h3"); h.textContent=text; palEl.appendChild(h); }
-function list(items){ const gw=document.createElement("div"); gw.className="tools"; items.forEach(d=>gw.appendChild(btn(d))); palEl.appendChild(gw); }
+function toolList(items){ const gw=document.createElement("div"); gw.className="tools"; items.forEach(d=>gw.appendChild(btn(d))); return gw; }
+function makeCollapse(title, bodyEl, section){
+  const c=document.createElement("div"); c.className="collapse"; c.dataset.section=section;
+  const h=document.createElement("button"); h.type="button"; h.className="collapse-head";
+  h.innerHTML=`<span class="ttl">${title}</span><span class="caret">▸</span>`;
+  const b=document.createElement("div"); b.className="collapse-body"; b.appendChild(bodyEl);
+  c.appendChild(h); c.appendChild(b);
+  return c;
+}
 function buildPalette(){
   palEl.innerHTML="";
-  h3("Text"); list([TEXT_TOOL]);
-  palEl.appendChild(tpanelEl);
-  h3("Terrain"); list(TERRAIN_TOOLS);
-  h3("Features"); list([...VEG_TOOLS, ...RIVER_TOOLS, ROAD_TOOL, ...POI_TOOLS]);
-  h3("Edit"); list([ERASE_TOOL]);
+  const textBody=document.createElement("div");
+  textBody.appendChild(btn(TEXT_TOOL));
+  textBody.appendChild(tpanelEl);
+  palEl.appendChild(makeCollapse("Text", textBody, "text"));
+  palEl.appendChild(makeCollapse("Terrain", toolList(TERRAIN_TOOLS), "terrain"));
+  palEl.appendChild(makeCollapse("Features", toolList([...VEG_TOOLS, ...RIVER_TOOLS, ROAD_TOOL, ...POI_TOOLS]), "features"));
+  palEl.appendChild(makeCollapse("Edit", toolList([ERASE_TOOL]), "edit"));
   reflectTool();
 }

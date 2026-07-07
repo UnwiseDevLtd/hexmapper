@@ -27,7 +27,6 @@ document.getElementById("loadfile").addEventListener("change",e=>{
   rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
     COLS=d.cols||COLS; ROWS=d.rows||ROWS; recomputeGrid(); allocArrays();
     if(d.terrain) terrain.set(d.terrain); if(d.rivers) rivers.set(d.rivers); if(d.roads) roads.set(d.roads); if(d.veg) veg.set(d.veg); if(d.entity) entity.set(d.entity);
-    migrateArrays();
     texts=Array.isArray(d.texts)?d.texts:[]; selText=-1;
     dirty=true; updateDims(); syncTextPanel(); fitGrid(); render(); commit("load"); scheduleSave(true);
   }catch(err){alert("Invalid JSON: "+err.message);} };
