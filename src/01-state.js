@@ -25,6 +25,7 @@ let dirty=true, hover={c:-1,r:-1};
 let fontSize=14;
 let paintMode="line";
 let showIds=false, idSize=9, idBg="none", idPos="center";
+let bgAbove=false;
 
 const txtEl=document.getElementById("txt");
 const tsvEl=document.getElementById("tsv");
