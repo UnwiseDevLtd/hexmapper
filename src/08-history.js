@@ -2,17 +2,15 @@ let history=[], histPtr=-1, lastKind=null, lastTime=0;
 const HIST_MAX=100;
 function snapshot(){
   return {cols:COLS,rows:ROWS,
-    terrain:terrain.slice(), rivers:rivers.slice(), roads:roads.slice(), veg:veg.slice(), entity:entity.slice(),
-    texts:texts.map(t=>({...t}))};
+    terrain:terrain.slice(), veg:veg.slice(), entity:entity.slice(),
+    texts:texts.map(t=>({...t})),
+    edges:[...overlayEdges.values()].map(e=>({type:e.type,a:[e.a[0],e.a[1]],b:[e.b[0],e.b[1]]}))};
 }
 function restore(s){
   COLS=s.cols; ROWS=s.rows; recomputeGrid();
   allocArrays();
-  terrain.set(s.terrain);
-  if(s.rivers) rivers.set(s.rivers);
-  if(s.roads) roads.set(s.roads);
-  if(s.veg) veg.set(s.veg);
-  if(s.entity) entity.set(s.entity);
+  terrain.set(s.terrain); if(s.veg) veg.set(s.veg); if(s.entity) entity.set(s.entity);
+  overlayEdges=new Map((s.edges||[]).map(e=>[edgeKeyOf(e.a,e.b),{type:e.type,a:[e.a[0],e.a[1]],b:[e.b[0],e.b[1]]}]));
   texts=s.texts.map(t=>({...t})); selText=-1; dirty=true; updateDims(); syncTextPanel(); fitGrid(); render();
 }
 function commit(kind){

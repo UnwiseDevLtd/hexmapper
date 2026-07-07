@@ -14,9 +14,9 @@ function drawTilesLayer(g){
   g.strokeStyle="rgba(0,0,0,0.32)"; g.lineWidth=1;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); }
-  drawOverlay(g, rivers, 1, WATER_RIVER, false);
-  drawOverlay(g, rivers, 2, LAVA_RIVER, false);
-  drawOverlay(g, roads, 1, ROAD_COLOR, true);
+  drawEdges(g, 1, WATER_RIVER, false);
+  drawEdges(g, 2, LAVA_RIVER, false);
+  drawEdges(g, 3, ROAD_COLOR, true);
   drawSettlementPaths(g);
   drawVeg(g);
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const e=entity[idx(c,r)]; if(e===0) continue; const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy,c,r); }
@@ -64,12 +64,10 @@ function drawPreview(g){
   }
   else if(active.kind==="river"){
     const col=active.type===1?WATER_RIVER:LAVA_RIVER;
-    g.strokeStyle=col; g.lineWidth=S*0.18; g.lineCap="round"; g.lineJoin="round";
-    drawSegments(g,0,0,overlayMids(rivers,hover.c,hover.r,active.type));
-    g.fillStyle=col; g.beginPath(); g.arc(0,0,S*0.12,0,7); g.fill();
+    g.fillStyle=col; g.beginPath(); g.arc(0,0,S*0.14,0,7); g.fill();
   } else if(active.kind==="road"){
-    g.strokeStyle=ROAD_COLOR; g.lineWidth=S*0.13; g.lineCap="butt"; g.lineJoin="round"; g.setLineDash([S*0.3,S*0.2]);
-    drawSegments(g,0,0,overlayMids(roads,hover.c,hover.r,1)); g.setLineDash([]);
+    g.strokeStyle=ROAD_COLOR; g.lineWidth=S*0.13; g.lineCap="butt"; g.setLineDash([S*0.3,S*0.2]);
+    g.beginPath(); g.moveTo(-S*0.35,0); g.lineTo(S*0.35,0); g.stroke(); g.setLineDash([]);
   } else if(active.kind==="entity"){ drawEntity(g,active.id,0,0,hover.c,hover.r); }
   g.globalAlpha=1;
 }

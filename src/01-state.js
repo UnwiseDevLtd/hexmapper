@@ -1,8 +1,9 @@
 let terrain=new Uint8Array(ROWS*COLS);
-let rivers =new Uint8Array(ROWS*COLS);
-let roads  =new Uint8Array(ROWS*COLS);
 let veg    =new Uint8Array(ROWS*COLS);
 let entity =new Uint8Array(ROWS*COLS);
+// rivers & roads are now EXPLICIT EDGES between adjacent tiles (edge model).
+// edge value: {type, a:[c,r], b:[c,r]}; type 1=water river, 2=lava river, 3=road.
+let overlayEdges=new Map();
 let texts=[];
 let selText=-1;
 

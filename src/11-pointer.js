@@ -1,4 +1,4 @@
-let mode=null,lastHex=null,panStart=null,dragOff=null;
+let mode=null,lastHex=null,panStart=null,dragOff=null,lastEdgeTile=null,edgeType=0;
 stage.addEventListener("contextmenu",e=>e.preventDefault());
 stage.addEventListener("pointerdown",e=>{
   try{ stage.setPointerCapture(e.pointerId); }catch(_){}
@@ -19,14 +19,16 @@ stage.addEventListener("pointerdown",e=>{
     if(floodFill(c,r)){ commit("fill"); scheduleSave(true); }
     render(); return;
   }
-  // right-click always erases the active layer; Eraser op erases on left-click too
   strokeErasing = (e.button===2) || (e.button===0 && opMode==="erase");
-  if(!strokeErasing){
-    if(active.kind==="river") strokeVal=active.type;
-    else if(active.kind==="road") strokeVal=1;
-    else if(active.kind==="veg") strokeVal=active.type;
-    else strokeVal=0;
+  // edge tools (rivers / roads): drag between adjacent tiles to add links
+  if(active.kind==="river"||active.kind==="road"){
+    edgeType = active.kind==="river" ? active.type : 3;
+    mode="edge"; lastEdgeTile=[c,r];
+    if(strokeErasing && inB(c,r)){ eraseEdgesAt(c,r,edgeType); scheduleSave(); render(); }
+    return;
   }
+  // tile tools
+  if(!strokeErasing){ strokeVal = active.kind==="veg" ? active.type : 0; }
   mode="paint"; applyTool(c,r); lastHex={c,r}; scheduleSave(); render();
 });
 stage.addEventListener("pointermove",e=>{
@@ -36,19 +38,31 @@ stage.addEventListener("pointermove",e=>{
   if(active.kind==="text"){ stage.classList.toggle("textmode",hitText(wx,wy)>=0||mode==="textdrag"); }
   if(mode==="pan"){ cam.x=panStart.cx+(e.clientX-panStart.x); cam.y=panStart.cy+(e.clientY-panStart.y); render(); }
   else if(mode==="textdrag"){ if(selText>=0){ texts[selText].x=wx-dragOff.x; texts[selText].y=wy-dragOff.y; dirty=true; render(); } }
+  else if(mode==="edge"){
+    if(!inB(c,r)) return;
+    if(strokeErasing){
+      if(c!==lastEdgeTile[0]||r!==lastEdgeTile[1]){ eraseEdgesAt(c,r,edgeType); lastEdgeTile=[c,r]; scheduleSave(); render(); }
+    } else {
+      if(lastEdgeTile && (c!==lastEdgeTile[0]||r!==lastEdgeTile[1])){
+        if(tilesAdjacent(lastEdgeTile,[c,r])) addEdge(lastEdgeTile,[c,r],edgeType);
+        lastEdgeTile=[c,r]; scheduleSave(); render();
+      }
+    }
+  }
   else if(mode==="paint"){ if(lastHex) paintLine(lastHex.c,lastHex.r,c,r); else applyTool(c,r); lastHex={c,r}; scheduleSave(); render(); }
   else render();
 });
 function endPtr(e){
   if(mode==="paint") commit("paint");
   else if(mode==="textdrag") commit("drag");
-  if(mode==="paint"||mode==="textdrag") scheduleSave(true);
-  mode=null; lastHex=null; dragOff=null; strokeErasing=false;
+  else if(mode==="edge") commit("edge");
+  if(mode!=="pan") scheduleSave(true);
+  mode=null; lastHex=null; dragOff=null; lastEdgeTile=null; strokeErasing=false;
   stage.classList.remove("panning"); stage.classList.remove("textmode");
   try{stage.releasePointerCapture(e.pointerId);}catch(_){}
   render();
 }
 stage.addEventListener("pointerup",endPtr);
 stage.addEventListener("pointercancel",endPtr);
-stage.addEventListener("pointerleave",()=>{ hover={c:-1,r:-1}; if(mode!=="paint"&&mode!=="textdrag") render(); });
+stage.addEventListener("pointerleave",()=>{ hover={c:-1,r:-1}; if(mode!=="paint"&&mode!=="textdrag"&&mode!=="edge") render(); });
 stage.addEventListener("wheel",e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY,e.deltaY<0?1.12:1/1.12); },{passive:false});

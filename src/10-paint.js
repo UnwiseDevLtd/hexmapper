@@ -1,18 +1,14 @@
 let strokeVal=0, strokeErasing=false;
-// add or erase the ACTIVE layer type at a hex, decided by strokeErasing.
+// tile tools (terrain / veg / entity). rivers & roads are edges, handled in the pointer.
 function applyTool(c,r){
   if(!inB(c,r)) return;
   const i=idx(c,r);
   if(strokeErasing){
     if(active.kind==="terrain") terrain[i]=0;
-    else if(active.kind==="river") rivers[i]=0;
-    else if(active.kind==="road") roads[i]=0;
     else if(active.kind==="veg") veg[i]=0;
     else if(active.kind==="entity") entity[i]=0;
   } else {
     if(active.kind==="terrain") terrain[i]=active.id;
-    else if(active.kind==="river") rivers[i]=strokeVal;
-    else if(active.kind==="road") roads[i]=strokeVal;
     else if(active.kind==="veg") veg[i]=strokeVal;
     else if(active.kind==="entity") entity[i]=active.id;
   }
