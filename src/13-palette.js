@@ -1,4 +1,4 @@
-const palEl=document.getElementById("palette");
+const toolbarEl=document.getElementById("toolbar");
 function selectTool(d){
   if(d.kind==="op"){ opMode=d.mode; reflectTool(); render(); return; }
   if(d.kind==="terrain") active={kind:"terrain",id:d.id};
@@ -27,53 +27,46 @@ function matchActive(d){
   if(d.kind==="entity")  return a.kind==="entity"&&a.id===d.id;
   return a.kind===d.kind;
 }
-function activeSection(){
-  const k=active.kind;
-  if(k==="text") return "text";
-  if(k==="terrain") return "terrain";
-  return "features";
-}
-function openActiveSection(){
-  const s=activeSection();
-  palEl.querySelectorAll(":scope > .collapse").forEach(c=>c.classList.toggle("open", c.dataset.section===s));
-}
 function reflectTool(){
-  document.querySelectorAll(".tool").forEach(b=>{
+  document.querySelectorAll("[data-d]").forEach(b=>{
     const d=JSON.parse(b.dataset.d);
-    b.classList.toggle("on", d.kind==="op" ? d.mode===opMode : matchActive(d));
+    if(d.kind==="op") b.classList.toggle("on", d.mode===opMode);
+    else b.classList.toggle("on", matchActive(d));
   });
   document.getElementById("curtool").textContent=toolName(active);
-  openActiveSection();
 }
-function btn(d){
-  const b=document.createElement("button");
-  b.className="tool"; b.dataset.d=JSON.stringify(d);
-  const sw = d.kind==="op"
-    ? `<span class="sw icon">${d.icon}</span>`
-    : `<span class="sw" style="background:${d.sw}"></span>`;
-  b.innerHTML=`${sw}<span class="lab">${d.label}</span>`;
-  b.onclick=()=>selectTool(d);
+function sep(){ const s=document.createElement("div"); s.className="sep"; return s; }
+function modeBtn(d){
+  const b=document.createElement("button"); b.className="tbtn"; b.type="button";
+  b.dataset.d=JSON.stringify(d); b.textContent=d.icon||d.label;
+  b.title=d.label; b.onclick=()=>selectTool(d);
   return b;
 }
-function toolList(items){ const gw=document.createElement("div"); gw.className="tools"; items.forEach(d=>gw.appendChild(btn(d))); return gw; }
-function makeCollapse(title, bodyEl, section){
-  const c=document.createElement("div"); c.className="collapse"; c.dataset.section=section;
-  const h=document.createElement("button"); h.type="button"; h.className="collapse-head";
-  h.innerHTML=`<span class="ttl">${title}</span><span class="caret">▸</span>`;
-  const b=document.createElement("div"); b.className="collapse-body"; b.appendChild(bodyEl);
-  c.appendChild(h); c.appendChild(b);
-  return c;
+function ditem(d){
+  const b=document.createElement("button"); b.className="ditem"; b.type="button";
+  b.dataset.d=JSON.stringify(d);
+  b.innerHTML=`<span class="sw" style="background:${d.sw||"#888"}"></span>${d.label}`;
+  b.onclick=(e)=>{ e.stopPropagation(); selectTool(d); };
+  return b;
 }
-function buildPalette(){
-  palEl.innerHTML="";
-  const pm=document.createElement("div"); pm.className="paint-row";
-  PAINT_TOOLS.forEach(d=>pm.appendChild(btn(d)));
-  palEl.appendChild(pm);
-  const textBody=document.createElement("div");
-  textBody.appendChild(btn(TEXT_TOOL));
-  textBody.appendChild(tpanelEl);
-  palEl.appendChild(makeCollapse("Text", textBody, "text"));
-  palEl.appendChild(makeCollapse("Terrain", toolList(TERRAIN_TOOLS), "terrain"));
-  palEl.appendChild(makeCollapse("Features", toolList([...VEG_TOOLS, ...RIVER_TOOLS, ROAD_TOOL, ...POI_TOOLS]), "features"));
+function dropdown(label, tools){
+  const dd=document.createElement("div"); dd.className="dropdown";
+  const h=document.createElement("button"); h.className="tbtn"; h.type="button"; h.textContent=label+" \u25BE";
+  const m=document.createElement("div"); m.className="dropdown-menu";
+  tools.forEach(t=> m.appendChild(ditem(t)));
+  dd.appendChild(h); dd.appendChild(m);
+  return dd;
+}
+function buildToolbar(){
+  const tb=toolbarEl; tb.innerHTML="";
+  PAINT_TOOLS.forEach(d=> tb.appendChild(modeBtn(d)));
+  tb.appendChild(sep());
+  tb.appendChild(dropdown("\u26F0 Terrain", TERRAIN_TOOLS));
+  tb.appendChild(dropdown("\uD83C\uDF3F Nature", [...VEG_TOOLS, ...RIVER_TOOLS]));
+  tb.appendChild(dropdown("\uD83C\uDFF0 Build", [ROAD_TOOL, ...POI_TOOLS.filter(t=>[1,2,6,7,8].includes(t.id))]));
+  tb.appendChild(dropdown("\uD83D\uDCCD Markers", POI_TOOLS.filter(t=>[3,4,5].includes(t.id))));
+  const tbtn=document.createElement("button"); tbtn.className="tbtn"; tbtn.type="button";
+  tbtn.dataset.d=JSON.stringify(TEXT_TOOL); tbtn.textContent="Text";
+  tbtn.onclick=()=>selectTool(TEXT_TOOL); tb.appendChild(tbtn);
   reflectTool();
 }

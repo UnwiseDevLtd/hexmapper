@@ -1,1 +1,1 @@
-buildPalette(); loadSaved(); updateDims(); resize(); fitGrid(); commit("init"); syncTextPanel(); render();
+buildToolbar(); loadSaved(); updateDims(); resize(); fitGrid(); commit("init"); syncTextPanel(); render();
