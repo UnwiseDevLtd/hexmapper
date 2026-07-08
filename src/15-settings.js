@@ -15,7 +15,7 @@ document.querySelectorAll("[data-vs]").forEach(b=>{
 });
 document.getElementById("hdens").addEventListener("input",e=>{
   hatchDensity=+e.target.value; document.getElementById("hdv").textContent=hatchDensity+"%";
-  if(viewStyle==="hatch"){ dirty=true; render(); }
+  if(viewStyle==="bw"){ dirty=true; render(); }
 });
 document.getElementById("dimapply").onclick=()=>{ resizeGrid(+document.getElementById("colsin").value||1, +document.getElementById("rowsin").value||1); };
 document.getElementById("rotate").onclick=transposeGrid;
