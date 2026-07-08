@@ -34,15 +34,21 @@ document.getElementById("save").onclick=()=>{
 };
 document.getElementById("loadfile").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return; const rd=new FileReader();
-  rd.onload=()=>{ try{ const d=JSON.parse(rd.result);
-    COLS=d.cols||COLS; ROWS=d.rows||ROWS; recomputeGrid(); allocArrays();
-    if(d.terrain) terrain.set(d.terrain); if(d.veg) veg.set(d.veg); if(d.entity) entity.set(d.entity);
-    overlayEdges=new Map();
-    if(Array.isArray(d.edges)) d.edges.forEach(e=>{ const n=normEdge(e); overlayEdges.set(edgeKeyOf(n.a,n.b),n); });
-    else if(d.rivers||d.roads) seedEdgesFromTiles(d.rivers,d.roads); // TEMP seed stub
-    texts=Array.isArray(d.texts)?d.texts:[]; selText=-1;
-    dirty=true; updateDims(); syncTextPanel(); fitGrid(); render(); commit("load"); scheduleSave(true);
-  }catch(err){alert("Invalid JSON: "+err.message);} };
+  rd.onload=()=>{
+    let d;
+    try{ d=JSON.parse(rd.result); }catch(err){ alert("File is not valid JSON: "+err.message); return; }
+    try{ if(d.cols&&d.rows){ COLS=d.cols; ROWS=d.rows; recomputeGrid(); allocArrays(); } }catch(_){}
+    try{ if(d.terrain) terrain.set(d.terrain); }catch(_){ console.warn("[hexmapper] skipped malformed terrain"); }
+    try{ if(d.veg) veg.set(d.veg); }catch(_){ console.warn("[hexmapper] skipped malformed veg"); }
+    try{ if(d.entity) entity.set(d.entity); }catch(_){ console.warn("[hexmapper] skipped malformed entity"); }
+    try{
+      overlayEdges=new Map();
+      if(Array.isArray(d.edges)) d.edges.forEach(e=>{ try{ const n=normEdge(e); overlayEdges.set(edgeKeyOf(n.a,n.b),n); }catch(_){} });
+      else if(d.rivers||d.roads) seedEdgesFromTiles(d.rivers,d.roads);
+    }catch(_){ console.warn("[hexmapper] skipped malformed edges"); }
+    try{ texts=Array.isArray(d.texts)?d.texts:[]; }catch(_){}
+    selText=-1; dirty=true; updateDims(); syncTextPanel(); fitGrid(); render(); commit("load"); scheduleSave(true);
+  };
   rd.readAsText(f);
 });
 document.getElementById("clear").onclick=()=>{ if(!confirm("Clear all hexes and labels?")) return; allocArrays(); overlayEdges=new Map(); texts=[]; selText=-1; dirty=true; syncTextPanel(); render(); commit("clear"); scheduleSave(true); };
