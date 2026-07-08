@@ -10,7 +10,7 @@ function bgRect(){
 function drawBackdrop(g){ const r=bgRect(); if(!r) return; g.fillStyle=bgColor; g.fillRect(r[0],r[1],r[2],r[3]); }
 function drawBgImage(g){ const r=bgRect(); if(!r) return; g.globalAlpha=bgOp; g.drawImage(bgImg,r[0],r[1],r[2],r[3]); g.globalAlpha=1; }
 function drawTilesLayer(g){
-  const bw=viewStyle==="bw"||viewStyle==="hatch", hatch=viewStyle==="hatch", alpha=viewStyle==="alpha";
+  const bw=viewStyle==="bw"||viewStyle==="hatch", hatch=viewStyle==="hatch";
   const patterns=hatch?buildHatchPatterns(g):null, symOvr=bw?"#333":null;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue;

@@ -44,15 +44,17 @@ function drawTerrain(g,id,cx,cy,ovr){
   }
 }
 function house(g,cx,cy,sz){
-  g.save(); g.fillStyle="#ffd479"; g.strokeStyle="#3a2a00"; g.lineWidth=1.1;
+  const BW=viewStyle==="bw"||viewStyle==="hatch";
+  g.save(); g.fillStyle=BW?"#bbb":"#ffd479"; g.strokeStyle=BW?"#222":"#3a2a00"; g.lineWidth=1.1;
   g.beginPath(); g.moveTo(cx,cy-sz*0.34); g.lineTo(cx+sz*0.3,cy-sz*0.05); g.lineTo(cx-sz*0.3,cy-sz*0.05); g.closePath(); g.fill(); g.stroke();
   g.fillRect(cx-sz*0.2,cy-sz*0.05,sz*0.4,sz*0.3); g.strokeRect(cx-sz*0.2,cy-sz*0.05,sz*0.4,sz*0.3);
   g.restore();
 }
 function squareBuilding(g,cx,cy,sz){
-  g.save(); g.fillStyle="#9a93a3"; g.strokeStyle="#26222c"; g.lineWidth=1;
+  const BW=viewStyle==="bw"||viewStyle==="hatch";
+  g.save(); g.fillStyle=BW?"#888":"#9a93a3"; g.strokeStyle="#26222c"; g.lineWidth=1;
   g.fillRect(cx-sz*0.5,cy-sz*0.5,sz,sz*1.15); g.strokeRect(cx-sz*0.5,cy-sz*0.5,sz,sz*1.15);
-  g.fillStyle="#3a4a6a";
+  g.fillStyle=BW?"#444":"#3a4a6a";
   for(const [wx,wy] of [[-0.2,-0.22],[0.05,-0.22],[-0.2,0.05],[0.05,0.05]]) g.fillRect(cx+wx*sz,cy+wy*sz,sz*0.15,sz*0.15);
   g.restore();
 }
@@ -69,25 +71,28 @@ function drawCityCluster(g,cx,cy,count){
   for(const [x,y] of spots) squareBuilding(g,cx+x*S,cy+y*S,sz);
 }
 function drawCastle(g,cx,cy){
-  g.save(); g.fillStyle="#8a7a6a"; g.strokeStyle="#241a12"; g.lineWidth=1;
+  const BW=viewStyle==="bw"||viewStyle==="hatch";
+  g.save(); g.fillStyle=BW?"#777":"#8a7a6a"; g.strokeStyle="#241a12"; g.lineWidth=1;
   g.fillRect(cx-S*0.30,cy-S*0.10,S*0.60,S*0.36); g.strokeRect(cx-S*0.30,cy-S*0.10,S*0.60,S*0.36);
   for(const [tx,ty] of [[-0.30,-0.22],[0.30,-0.22],[-0.30,0.20],[0.30,0.20]]){
     g.fillRect(cx+tx*S-S*0.10,cy+ty*S-S*0.10,S*0.20,S*0.22); g.strokeRect(cx+tx*S-S*0.10,cy+ty*S-S*0.10,S*0.20,S*0.22);
   }
-  g.fillStyle="#2a1a0a"; g.fillRect(cx-S*0.08,cy+S*0.06,S*0.16,S*0.20);
+  g.fillStyle=BW?"#333":"#2a1a0a"; g.fillRect(cx-S*0.08,cy+S*0.06,S*0.16,S*0.20);
   g.restore();
 }
 function drawTower(g,cx,cy){
-  g.save(); g.fillStyle="#9a93a3"; g.strokeStyle="#26222c"; g.lineWidth=1;
+  const BW=viewStyle==="bw"||viewStyle==="hatch";
+  g.save(); g.fillStyle=BW?"#888":"#9a93a3"; g.strokeStyle="#26222c"; g.lineWidth=1;
   g.fillRect(cx-S*0.13,cy-S*0.36,S*0.26,S*0.62); g.strokeRect(cx-S*0.13,cy-S*0.36,S*0.26,S*0.62);
   for(const tx of [-0.13,-0.02,0.10]) g.fillRect(cx+tx*S,cy-S*0.42,S*0.09,S*0.08);
-  g.fillStyle="#3a4a6a"; g.fillRect(cx-S*0.05,cy-S*0.20,S*0.10,S*0.12);
+  g.fillStyle=BW?"#444":"#3a4a6a"; g.fillRect(cx-S*0.05,cy-S*0.20,S*0.10,S*0.12);
   g.restore();
 }
 function drawCamp(g,cx,cy){
-  g.save(); g.fillStyle="#c98e4a"; g.strokeStyle="#3a2010"; g.lineWidth=1;
+  const BW=viewStyle==="bw"||viewStyle==="hatch";
+  g.save(); g.fillStyle=BW?"#999":"#c98e4a"; g.strokeStyle=BW?"#222":"#3a2010"; g.lineWidth=1;
   g.beginPath(); g.moveTo(cx,cy-S*0.28); g.lineTo(cx+S*0.30,cy+S*0.20); g.lineTo(cx-S*0.30,cy+S*0.20); g.closePath(); g.fill(); g.stroke();
-  g.fillStyle="#e06a2a"; g.beginPath(); g.arc(cx+S*0.34,cy+S*0.26,S*0.06,0,7); g.fill();
+  g.fillStyle=BW?"#555":"#e06a2a"; g.beginPath(); g.arc(cx+S*0.34,cy+S*0.26,S*0.06,0,7); g.fill();
   g.restore();
 }
 function drawSkull(g,cx,cy){
@@ -122,39 +127,43 @@ function drawEntity(g,type,cx,cy,c,r){
   if(type===7){ drawTower(g,cx,cy); return; }
   if(type===8){ drawCamp(g,cx,cy); return; }
   if(type===3){
+    const BW=viewStyle==="bw"||viewStyle==="hatch";
     g.save(); g.textAlign="center"; g.textBaseline="middle";
     g.font=`bold ${Math.round(S*1.15)}px ui-sans-serif,system-ui,sans-serif`;
     g.lineWidth=3; g.strokeStyle="#000"; g.strokeText("?",cx,cy);
-    g.fillStyle="#ffe14d"; g.fillText("?",cx,cy); g.restore(); return;
+    g.fillStyle=BW?"#333":"#ffe14d"; g.fillText("?",cx,cy); g.restore(); return;
   }
   if(type===4){ drawSkull(g,cx,cy); return; }
   if(type===5){ drawCave(g,cx,cy); return; }
 }
 function drawForestCluster(g,cx,cy){
+  const BW=viewStyle==="bw"||viewStyle==="hatch";
   g.save();
-  g.fillStyle="#0c3a12";
+  g.fillStyle=BW?"#333":"#0c3a12";
   for(const [bx,by,br] of [[-0.24,0.08,0.26],[0.24,0.08,0.26],[0,-0.18,0.32]]){
     g.beginPath(); g.arc(cx+bx*S,cy+by*S,br*S,0,Math.PI*2); g.fill();
   }
-  g.fillStyle="#2e6a36";
+  g.fillStyle=BW?"#555":"#2e6a36";
   for(const [bx,by,br] of [[-0.24,0.02,0.13],[0.24,0.02,0.13],[0,-0.24,0.16]]){
     g.beginPath(); g.arc(cx+bx*S,cy+by*S,br*S,0,Math.PI*2); g.fill();
   }
-  g.fillStyle="#3a2a14";
+  g.fillStyle=BW?"#666":"#3a2a14";
   g.fillRect(cx-S*0.05,cy+S*0.22,S*0.10,S*0.12);
   g.restore();
 }
 function drawVeg(g){
+  const BW=viewStyle==="bw"||viewStyle==="hatch";
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const v=veg[idx(c,r)]; if(!v) continue;
     const [cx,cy]=center(c,r);
-    if(v===1) tree(g,cx,cy,S*0.95,"#1f5a22");
+    if(v===1) tree(g,cx,cy,S*0.95,BW?"#444":"#1f5a22");
     else drawForestCluster(g,cx,cy);
   }
 }
 // thin dirt paths linking adjacent settlement tiles (the "road" in town/city)
 function drawSettlementPaths(g){
-  g.save(); g.strokeStyle="#9a8456"; g.lineWidth=S*0.08; g.lineCap="round"; g.lineJoin="round";
+  const BW=viewStyle==="bw"||viewStyle==="hatch";
+  g.save(); g.strokeStyle=BW?"#999":"#9a8456"; g.lineWidth=S*0.08; g.lineCap="round"; g.lineJoin="round";
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     if(!isSettlement(entity[idx(c,r)])) continue;
     const [cx,cy]=center(c,r), ns=neighbors(c,r);

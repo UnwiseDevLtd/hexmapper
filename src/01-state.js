@@ -29,6 +29,7 @@ let showIds=false, idSize=9, idBg="none", idPos="center";
 let bgAbove=false;
 let bgColor="#ffffff";
 let viewStyle="color";
+let hatchDensity=50;
 
 const txtEl=document.getElementById("txt");
 const tsvEl=document.getElementById("tsv");
