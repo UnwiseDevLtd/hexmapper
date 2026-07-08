@@ -16,7 +16,7 @@ function drawTilesLayer(g){
     const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue;
     const [cx,cy]=center(c,r); hexPath(g,cx,cy);
     if(bw){ g.fillStyle=patterns[t]||"transparent"; g.fill(); }
-    else { g.fillStyle=TERR[t].fill; g.fill(); }
+    else { if(hatchDensity<100) g.globalAlpha=hatchDensity/100; g.fillStyle=TERR[t].fill; g.fill(); if(hatchDensity<100) g.globalAlpha=1; }
   }
   g.strokeStyle="rgba(0,0,0,0.32)"; g.lineWidth=1;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
@@ -31,10 +31,10 @@ function drawTilesLayer(g){
 }
 function buildWorld(includeBg){
   const g=wctx; g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,world.width,world.height);
-  const showBg = includeBg && viewStyle==="color";
+  const showBg = includeBg && viewStyle==="color" && hatchDensity>=100;
   if(showBg) drawBackdrop(g);
   if(showBg && !bgAbove) drawBgImage(g);
-  if(viewStyle==="bw"){ g.fillStyle="#ffffff"; g.fillRect(0,0,GRID_W,GRID_H); }
+  if(viewStyle==="bw" || (viewStyle==="color" && hatchDensity<100)){ g.fillStyle="#ffffff"; g.fillRect(0,0,GRID_W,GRID_H); }
   drawTilesLayer(g);
   if(showBg && bgAbove) drawBgImage(g);
   drawTexts(g);

@@ -2,7 +2,7 @@ function densityToGray(d){ const v=Math.round(240-d/100*200); const h=v.toString
 function buildHatchPatterns(g, stroke){
   const ts=10;
   const P={}, mk=(fn)=>{ const c=document.createElement("canvas"); c.width=ts; c.height=ts; fn(c.getContext("2d")); return g.createPattern(c,null); };
-  P[3]=mk(h=>{h.fillStyle=stroke;[1,5,9].forEach(x=>[1,5,9].forEach(y=>h.fillRect(x,y,1.5,1.5)));});
+  P[3]=mk(h=>{h.fillStyle=stroke;h.fillRect(3,3,1.5,1.5);h.fillRect(7,7,1.5,1.5);});
   P[4]=mk(h=>{h.strokeStyle=stroke;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts);h.lineTo(ts,0);h.stroke();});
   P[5]=mk(h=>{});
   P[6]=mk(h=>{h.fillStyle=stroke;for(let i=0;i<ts;i+=3)for(let j=0;j<ts;j+=3)h.fillRect(i,j,1,1);});
