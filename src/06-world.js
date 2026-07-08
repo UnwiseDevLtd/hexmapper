@@ -10,14 +10,22 @@ function bgRect(){
 function drawBackdrop(g){ const r=bgRect(); if(!r) return; g.fillStyle=bgColor; g.fillRect(r[0],r[1],r[2],r[3]); }
 function drawBgImage(g){ const r=bgRect(); if(!r) return; g.globalAlpha=bgOp; g.drawImage(bgImg,r[0],r[1],r[2],r[3]); g.globalAlpha=1; }
 function drawTilesLayer(g){
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }
+  const bw=viewStyle==="bw"||viewStyle==="hatch", hatch=viewStyle==="hatch", alpha=viewStyle==="alpha";
+  const patterns=hatch?buildHatchPatterns(g):null, symOvr=bw?"#333":null;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue;
+    const [cx,cy]=center(c,r); hexPath(g,cx,cy);
+    if(viewStyle==="color") g.fillStyle=TERR[t].fill;
+    else if(hatch) g.fillStyle=patterns[t]||"#fff";
+    else continue;
+    g.fill();
+  }
   g.strokeStyle="rgba(0,0,0,0.32)"; g.lineWidth=1;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); }
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy,symOvr); }
   const bank=computeBankOffsets();
-  drawEdges(g, 1, WATER_RIVER, false, bank);
-  drawEdges(g, 2, LAVA_RIVER, false, bank);
-  drawEdges(g, 3, ROAD_COLOR, true, bank);
+  if(bw){ drawEdges(g,1,"#000",false,bank); drawEdges(g,2,"#444",false,bank); drawEdges(g,3,"#000",true,bank); }
+  else { drawEdges(g,1,WATER_RIVER,false,bank); drawEdges(g,2,LAVA_RIVER,false,bank); drawEdges(g,3,ROAD_COLOR,true,bank); }
   drawSettlementPaths(g);
   drawVeg(g);
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ const e=entity[idx(c,r)]; if(e===0) continue; const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy,c,r); }
@@ -25,10 +33,12 @@ function drawTilesLayer(g){
 }
 function buildWorld(includeBg){
   const g=wctx; g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,world.width,world.height);
-  if(includeBg) drawBackdrop(g);
-  if(includeBg && !bgAbove) drawBgImage(g);
+  const showBg = includeBg && viewStyle==="color";
+  if(showBg) drawBackdrop(g);
+  if(showBg && !bgAbove) drawBgImage(g);
+  if(viewStyle==="bw"||viewStyle==="hatch"){ g.fillStyle="#ffffff"; g.fillRect(0,0,GRID_W,GRID_H); }
   drawTilesLayer(g);
-  if(includeBg && bgAbove) drawBgImage(g);
+  if(showBg && bgAbove) drawBgImage(g);
   drawTexts(g);
   g.strokeStyle="rgba(255,255,255,0.15)"; g.lineWidth=2; g.strokeRect(0,0,GRID_W,GRID_H);
 }

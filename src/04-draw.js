@@ -10,9 +10,9 @@ function waveH(g,cx,cy,scale){
   for(let i=1;i<=steps;i++){ const mx=x0+dx*(i-0.5),xx=x0+dx*i; g.quadraticCurveTo(mx,cy+(i%2?S*0.1:-S*0.1),xx,cy); }
   g.stroke();
 }
-function drawTerrain(g,id,cx,cy){
+function drawTerrain(g,id,cx,cy,ovr){
   if(!TERR[id]) return;
-  const sym=TERR[id].sym; g.fillStyle=sym; g.strokeStyle=sym; g.lineJoin="round"; g.lineCap="round";
+  const sym=ovr||TERR[id].sym; g.fillStyle=sym; g.strokeStyle=sym; g.lineJoin="round"; g.lineCap="round";
   switch(id){
     case 3: g.lineWidth=S*0.07; for(const [tx,ty] of [[-0.25,0.12],[0.05,-0.06],[0.25,0.16]]){ g.beginPath(); g.moveTo(cx+tx*S,cy+ty*S); g.lineTo(cx+tx*S,cy+(ty-0.13)*S); g.stroke(); } break;
     case 4: g.lineWidth=S*0.13; g.beginPath();

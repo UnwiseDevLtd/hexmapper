@@ -10,6 +10,9 @@ document.addEventListener("click",e=>{
   col.classList.toggle("open");
 });
 
+document.querySelectorAll("[data-vs]").forEach(b=>{
+  b.onclick=()=>{ viewStyle=b.dataset.vs; document.querySelectorAll("[data-vs]").forEach(x=>x.classList.toggle("on",x===b)); dirty=true; render(); };
+});
 document.getElementById("dimapply").onclick=()=>{ resizeGrid(+document.getElementById("colsin").value||1, +document.getElementById("rowsin").value||1); };
 document.getElementById("rotate").onclick=transposeGrid;
 document.getElementById("idshow").addEventListener("change",e=>{ showIds=e.target.checked; dirty=true; render(); });

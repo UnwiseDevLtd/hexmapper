@@ -107,7 +107,7 @@
     <div class="collapse">
       <button class="collapse-head" type="button"><span class="ttl">Export</span><span class="caret">▸</span></button>
       <div class="collapse-body">
-        <div class="row">
+        <div class="row" style="margin-top:6px">
           <button class="act" id="export">Export PNG</button>
           <button class="act" id="save">Save JSON</button>
         </div>
@@ -122,6 +122,13 @@
     <div class="collapse">
       <button class="collapse-head" type="button"><span class="ttl">Settings</span><span class="caret">▸</span></button>
       <div class="collapse-body">
+        <div class="seg">Map style</div>
+        <div class="row tight">
+          <button class="act on" data-vs="color">Color</button>
+          <button class="act" data-vs="bw">B&amp;W</button>
+          <button class="act" data-vs="hatch">Hatch</button>
+          <button class="act" data-vs="alpha">Alpha</button>
+        </div>
         <label>Grid</label>
         <div class="row tight">
           <label style="margin:0;flex:1">Cols <input type="number" id="colsin" value="100" min="1" max="400" style="margin-top:3px"></label>

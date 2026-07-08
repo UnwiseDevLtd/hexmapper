@@ -1,15 +1,23 @@
+function buildHatchPatterns(g){
+  const P={}, S="#888", mk=(fn)=>{ const c=document.createElement("canvas"); c.width=10; c.height=10; fn(c.getContext("2d")); return g.createPattern(c,null); };
+  P[3]=mk(h=>{h.fillStyle="#ccc";[1,5,9].forEach(x=>[1,5,9].forEach(y=>h.fillRect(x,y,1.5,1.5)));});
+  P[4]=mk(h=>{h.strokeStyle=S;h.lineWidth=.5;h.beginPath();h.moveTo(0,10);h.lineTo(10,0);h.stroke();});
+  P[5]=mk(h=>{});
+  P[6]=mk(h=>{h.fillStyle="#ddd";for(let i=0;i<10;i+=3)for(let j=0;j<10;j+=3)h.fillRect(i,j,1,1);});
+  P[7]=mk(h=>{h.strokeStyle=S;h.lineWidth=.5;h.beginPath();h.moveTo(0,10);h.lineTo(10,0);h.moveTo(3,10);h.lineTo(10,3);h.stroke();});
+  P[8]=mk(h=>{h.strokeStyle=S;h.lineWidth=.5;h.beginPath();h.moveTo(0,10);h.lineTo(10,0);h.moveTo(3,10);h.lineTo(10,3);h.moveTo(0,7);h.lineTo(7,0);h.stroke();});
+  P[9]=mk(h=>{h.strokeStyle=S;h.lineWidth=.5;h.beginPath();h.moveTo(0,3);h.lineTo(10,3);h.moveTo(0,7);h.lineTo(10,7);h.stroke();});
+  P[10]=mk(h=>{h.strokeStyle=S;h.lineWidth=.5;h.beginPath();h.moveTo(0,2);h.lineTo(10,2);h.moveTo(0,5);h.lineTo(10,5);h.moveTo(0,8);h.lineTo(10,8);h.stroke();});
+  P[11]=mk(h=>{h.strokeStyle=S;h.lineWidth=.5;h.beginPath();h.moveTo(0,0);h.lineTo(10,10);h.moveTo(10,0);h.lineTo(0,10);h.stroke();});
+  P[12]=mk(h=>{h.strokeStyle=S;h.lineWidth=.5;h.beginPath();h.moveTo(0,0);h.lineTo(10,10);h.moveTo(10,0);h.lineTo(0,10);h.moveTo(0,5);h.lineTo(5,0);h.moveTo(5,10);h.lineTo(10,5);h.stroke();});
+  P[13]=mk(h=>{h.strokeStyle=S;h.lineWidth=.5;h.beginPath();h.moveTo(0,4);h.lineTo(5,4);h.moveTo(7,4);h.lineTo(10,4);h.stroke();});
+  P[14]=mk(h=>{});
+  return P;
+}
 function exportDraw(g){
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }
-  g.strokeStyle="rgba(0,0,0,0.4)"; g.lineWidth=1; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(t&&TERR[t]){ const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); } }
-  const bank=computeBankOffsets();
-  drawEdges(g, 1, WATER_RIVER, false, bank);
-  drawEdges(g, 2, LAVA_RIVER, false, bank);
-  drawEdges(g, 3, ROAD_COLOR, true, bank);
-  drawSettlementPaths(g);
-  drawVeg(g);
-  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const e=entity[idx(c,r)]; if(e===0) continue; const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy,c,r); }
-  drawIds(g); drawTexts(g);
+  if(viewStyle==="bw"||viewStyle==="hatch"){ g.fillStyle="#ffffff"; g.fillRect(0,0,GRID_W,GRID_H); }
+  drawTilesLayer(g);
+  drawTexts(g);
 }
 document.getElementById("export").onclick=()=>{
   const t=document.createElement("canvas"); t.width=Math.ceil(GRID_W); t.height=Math.ceil(GRID_H);
