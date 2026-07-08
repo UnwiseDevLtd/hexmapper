@@ -15,9 +15,9 @@ document.getElementById("export").onclick=()=>{
   exportDraw(t.getContext("2d")); const a=document.createElement("a"); a.download="hexmap.png"; a.href=t.toDataURL("image/png"); a.click();
 };
 document.getElementById("save").onclick=()=>{
-  const data={v:8,cols:COLS,rows:ROWS,
+  const data={v:9,cols:COLS,rows:ROWS,
     terrain:Array.from(terrain), veg:Array.from(veg), entity:Array.from(entity),
-    edges:[...overlayEdges.values()].map(e=>({type:e.type,a:e.a,b:e.b})),
+    edges:[...overlayEdges.values()].map(e=>({a:e.a,b:e.b,river:e.river,road:e.road})),
     texts};
   const a=document.createElement("a"); a.download="hexmap.json"; a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:"application/json"})); a.click();
 };
@@ -27,7 +27,7 @@ document.getElementById("loadfile").addEventListener("change",e=>{
     COLS=d.cols||COLS; ROWS=d.rows||ROWS; recomputeGrid(); allocArrays();
     if(d.terrain) terrain.set(d.terrain); if(d.veg) veg.set(d.veg); if(d.entity) entity.set(d.entity);
     overlayEdges=new Map();
-    if(Array.isArray(d.edges)) d.edges.forEach(e=> overlayEdges.set(edgeKeyOf(e.a,e.b),{type:e.type,a:e.a,b:e.b}));
+    if(Array.isArray(d.edges)) d.edges.forEach(e=>{ const n=normEdge(e); overlayEdges.set(edgeKeyOf(n.a,n.b),n); });
     else if(d.rivers||d.roads) seedEdgesFromTiles(d.rivers,d.roads); // TEMP seed stub
     texts=Array.isArray(d.texts)?d.texts:[]; selText=-1;
     dirty=true; updateDims(); syncTextPanel(); fitGrid(); render(); commit("load"); scheduleSave(true);

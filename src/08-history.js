@@ -4,13 +4,13 @@ function snapshot(){
   return {cols:COLS,rows:ROWS,
     terrain:terrain.slice(), veg:veg.slice(), entity:entity.slice(),
     texts:texts.map(t=>({...t})),
-    edges:[...overlayEdges.values()].map(e=>({type:e.type,a:[e.a[0],e.a[1]],b:[e.b[0],e.b[1]]}))};
+    edges:[...overlayEdges.values()].map(e=>({a:[e.a[0],e.a[1]],b:[e.b[0],e.b[1]],river:e.river,road:e.road}))};
 }
 function restore(s){
   COLS=s.cols; ROWS=s.rows; recomputeGrid();
   allocArrays();
   terrain.set(s.terrain); if(s.veg) veg.set(s.veg); if(s.entity) entity.set(s.entity);
-  overlayEdges=new Map((s.edges||[]).map(e=>[edgeKeyOf(e.a,e.b),{type:e.type,a:[e.a[0],e.a[1]],b:[e.b[0],e.b[1]]}]));
+  overlayEdges=new Map((s.edges||[]).map(e=>{ const n=normEdge(e); return [edgeKeyOf(n.a,n.b),n]; }));
   texts=s.texts.map(t=>({...t})); selText=-1; dirty=true; updateDims(); syncTextPanel(); fitGrid(); render();
 }
 function commit(kind){
