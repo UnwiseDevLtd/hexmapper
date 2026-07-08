@@ -2,9 +2,10 @@ function exportDraw(g){
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue; const [cx,cy]=center(c,r); hexPath(g,cx,cy); g.fillStyle=TERR[t].fill; g.fill(); }
   g.strokeStyle="rgba(0,0,0,0.4)"; g.lineWidth=1; for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const t=terrain[idx(c,r)]; if(t&&TERR[t]){ const [cx,cy]=center(c,r); drawTerrain(g,t,cx,cy); } }
-  drawEdges(g, 1, WATER_RIVER, false);
-  drawEdges(g, 2, LAVA_RIVER, false);
-  drawEdges(g, 3, ROAD_COLOR, true);
+  const bank=computeBankOffsets();
+  drawEdges(g, 1, WATER_RIVER, false, bank);
+  drawEdges(g, 2, LAVA_RIVER, false, bank);
+  drawEdges(g, 3, ROAD_COLOR, true, bank);
   drawSettlementPaths(g);
   drawVeg(g);
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ const e=entity[idx(c,r)]; if(e===0) continue; const [cx,cy]=center(c,r); drawEntity(g,e,cx,cy,c,r); }
