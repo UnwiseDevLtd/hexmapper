@@ -1,4 +1,4 @@
-.PHONY: build up down restart logs ps serve watch standalone release help
+.PHONY: build up down restart logs ps serve watch dev standalone release help
 
 PORT ?= 8000
 ENGINE ?= $(shell command -v docker >/dev/null 2>&1 && echo docker || echo podman)
@@ -32,6 +32,10 @@ serve: build    ## Build then serve without Docker on $(PORT)
 
 watch:          ## Rebuild dist/app.js on src/ changes
 	node build.js --watch
+
+dev:            ## Dev: watch src + serve with auto-reload on :$(PORT)
+	@echo "Dev mode on http://localhost:$(PORT) — edit src/*.js, browser auto-refreshes"
+	@node build.js --watch & WATCHPID=$$!; trap "kill $$WATCHPID 2>/dev/null" EXIT; python3 -m http.server $(PORT)
 
 standalone:     ## Build standalone minified single-file HTML (dist/standalone.html)
 	node build.js --standalone
