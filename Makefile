@@ -1,4 +1,7 @@
-.PHONY: build up down restart logs ps serve watch dev standalone release help
+-include .env
+export
+
+.PHONY: build up down restart logs ps serve watch dev standalone release publish help
 
 PORT ?= 8000
 ENGINE ?= $(shell command -v docker >/dev/null 2>&1 && echo docker || echo podman)
@@ -40,7 +43,8 @@ dev:            ## Dev: watch src + serve with auto-reload on :$(PORT)
 standalone:     ## Build standalone minified single-file HTML (dist/standalone.html)
 	node build.js --standalone
 
-release: standalone ## Tag and push a CALVER.SHA release
-	git tag $(VERSION)
-	git push origin $(VERSION)
-	@echo "Released $(VERSION) — standalone at dist/standalone.html"
+release: standalone ## Tag, push, and publish a CALVER.SHA release
+	@git tag $(VERSION) 2>/dev/null || true
+	@git push origin $(VERSION) 2>/dev/null || true
+	@node scripts/publish.js || echo "(Set CODEBERG_TOKEN in .env to auto-publish)"
+	@echo "Released $(VERSION)"
