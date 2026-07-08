@@ -2,9 +2,11 @@
 /*
   hexmapper build — concatenates src/*.js (plain global scripts, no modules)
   into a single dist/app.js loaded by index.html. No dependencies.
+  --standalone: minify + inline into a single dist/standalone.html with version stamp.
 */
 const fs = require("fs");
 const path = require("path");
+const { execSync } = require("child_process");
 
 const root = __dirname;
 const srcDir = path.join(root, "src");
@@ -24,7 +26,41 @@ function build() {
   console.log("[build] " + files.length + " files -> dist/app.js (" + s.length + " bytes)");
 }
 
-if (process.argv.includes("--watch")) {
+function minify(code) {
+  return code
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
+function getVersion() {
+  try {
+    const date = execSync("date +%Y%m%d").toString().trim();
+    const sha = execSync("git rev-parse --short HEAD").toString().trim();
+    return date + "." + sha;
+  } catch (_) { return "dev"; }
+}
+
+function buildStandalone() {
+  build();
+  const version = getVersion();
+  const raw = fs.readFileSync(outFile, "utf8");
+  const min = minify(raw);
+  const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  const out = html.replace(
+    '<script src="dist/app.js"></script>',
+    '<script>const VERSION="' + version + '";\n' + min + "\n</script>"
+  );
+  const standaloneFile = path.join(outDir, "standalone.html");
+  fs.writeFileSync(standaloneFile, out);
+  console.log("[build] standalone: dist/standalone.html (" + out.length + " bytes, version " + version + ")");
+}
+
+const args = process.argv.slice(2);
+if (args.includes("--standalone")) {
+  buildStandalone();
+} else if (args.includes("--watch")) {
   build();
   let t;
   fs.watch(srcDir, () => { clearTimeout(t); t = setTimeout(build, 100); });

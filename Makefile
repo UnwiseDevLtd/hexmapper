@@ -1,10 +1,11 @@
-.PHONY: build up down restart logs ps serve help
+.PHONY: build up down restart logs ps serve watch standalone release help
 
 PORT ?= 8000
 ENGINE ?= $(shell command -v docker >/dev/null 2>&1 && echo docker || echo podman)
+VERSION ?= $(shell date +%Y%m%d).$(shell git rev-parse --short HEAD)
 
 help:           ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-10s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-12s %s\n", $$1, $$2}'
 
 build:          ## Compile src/*.js -> dist/app.js
 	node build.js
@@ -31,3 +32,11 @@ serve: build    ## Build then serve without Docker on $(PORT)
 
 watch:          ## Rebuild dist/app.js on src/ changes
 	node build.js --watch
+
+standalone:     ## Build standalone minified single-file HTML (dist/standalone.html)
+	node build.js --standalone
+
+release: standalone ## Tag and push a CALVER.SHA release
+	git tag $(VERSION)
+	git push origin $(VERSION)
+	@echo "Released $(VERSION) — standalone at dist/standalone.html"
