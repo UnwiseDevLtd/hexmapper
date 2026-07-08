@@ -11,12 +11,15 @@ function drawBackdrop(g){ const r=bgRect(); if(!r) return; g.fillStyle=bgColor; 
 function drawBgImage(g){ const r=bgRect(); if(!r) return; g.globalAlpha=bgOp; g.drawImage(bgImg,r[0],r[1],r[2],r[3]); g.globalAlpha=1; }
 function drawTilesLayer(g){
   const bw=viewStyle==="bw", symOvr=bw?"#333":null;
-  const patterns=hatchOn?buildHatchPatterns(g):null;
+  const patterns=hatchOn?buildHatchPatterns(g, bw?densityToGray(hatchDensity):"#666"):null;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue;
     const [cx,cy]=center(c,r); hexPath(g,cx,cy);
-    if(!bw){ g.fillStyle=TERR[t].fill; g.fill(); }
-    if(hatchOn){ hexPath(g,cx,cy); g.fillStyle=patterns[t]||"transparent"; g.fill(); }
+    if(viewStyle==="color" && !hatchOn){ g.fillStyle=TERR[t].fill; g.fill(); }
+    else if(viewStyle==="color" && hatchOn){
+      g.globalAlpha=hatchDensity/100; g.fillStyle=TERR[t].fill; g.fill(); g.globalAlpha=1;
+      if(hatchDensity<100){ hexPath(g,cx,cy); g.globalAlpha=1-hatchDensity/100; g.fillStyle=patterns[t]||"transparent"; g.fill(); g.globalAlpha=1; }
+    } else if(bw && hatchOn){ g.fillStyle=patterns[t]||"transparent"; g.fill(); }
   }
   g.strokeStyle="rgba(0,0,0,0.32)"; g.lineWidth=1;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
@@ -31,10 +34,10 @@ function drawTilesLayer(g){
 }
 function buildWorld(includeBg){
   const g=wctx; g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,world.width,world.height);
-  const showBg = includeBg && viewStyle==="color";
+  const showBg = includeBg && viewStyle==="color" && !hatchOn;
   if(showBg) drawBackdrop(g);
   if(showBg && !bgAbove) drawBgImage(g);
-  if(viewStyle==="bw"){ g.fillStyle="#ffffff"; g.fillRect(0,0,GRID_W,GRID_H); }
+  if(viewStyle==="bw" || (viewStyle==="color" && hatchOn)){ g.fillStyle="#ffffff"; g.fillRect(0,0,GRID_W,GRID_H); }
   drawTilesLayer(g);
   if(showBg && bgAbove) drawBgImage(g);
   drawTexts(g);

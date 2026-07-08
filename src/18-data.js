@@ -1,17 +1,18 @@
-function buildHatchPatterns(g){
-  const ts=Math.max(2,Math.round(4+(100-hatchDensity)*0.16));
-  const P={}, S2="#888", mk=(fn)=>{ const c=document.createElement("canvas"); c.width=ts; c.height=ts; fn(c.getContext("2d")); return g.createPattern(c,null); };
-  P[3]=mk(h=>{h.fillStyle="#ccc";[0.1,0.5,0.9].forEach(x=>[0.1,0.5,0.9].forEach(y=>h.fillRect(x*ts,y*ts,ts*0.15,ts*0.15)));});
-  P[4]=mk(h=>{h.strokeStyle=S2;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts);h.lineTo(ts,0);h.stroke();});
+function densityToGray(d){ const v=Math.round(240-d/100*200); const h=v.toString(16).padStart(2,"0"); return "#"+h+h+h; }
+function buildHatchPatterns(g, stroke){
+  const ts=10;
+  const P={}, mk=(fn)=>{ const c=document.createElement("canvas"); c.width=ts; c.height=ts; fn(c.getContext("2d")); return g.createPattern(c,null); };
+  P[3]=mk(h=>{h.fillStyle=stroke;[1,5,9].forEach(x=>[1,5,9].forEach(y=>h.fillRect(x,y,1.5,1.5)));});
+  P[4]=mk(h=>{h.strokeStyle=stroke;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts);h.lineTo(ts,0);h.stroke();});
   P[5]=mk(h=>{});
-  P[6]=mk(h=>{h.fillStyle="#ddd";const st=ts*0.3;for(let i=0;i<ts;i+=st)for(let j=0;j<ts;j+=st)h.fillRect(i,j,1,1);});
-  P[7]=mk(h=>{h.strokeStyle=S2;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts);h.lineTo(ts,0);h.moveTo(ts*0.3,ts);h.lineTo(ts,ts*0.3);h.stroke();});
-  P[8]=mk(h=>{h.strokeStyle=S2;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts);h.lineTo(ts,0);h.moveTo(ts*0.3,ts);h.lineTo(ts,ts*0.3);h.moveTo(0,ts*0.7);h.lineTo(ts*0.7,0);h.stroke();});
-  P[9]=mk(h=>{h.strokeStyle=S2;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts*0.3);h.lineTo(ts,ts*0.3);h.moveTo(0,ts*0.7);h.lineTo(ts,ts*0.7);h.stroke();});
-  P[10]=mk(h=>{h.strokeStyle=S2;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts*0.2);h.lineTo(ts,ts*0.2);h.moveTo(0,ts*0.5);h.lineTo(ts,ts*0.5);h.moveTo(0,ts*0.8);h.lineTo(ts,ts*0.8);h.stroke();});
-  P[11]=mk(h=>{h.strokeStyle=S2;h.lineWidth=.5;h.beginPath();h.moveTo(0,0);h.lineTo(ts,ts);h.moveTo(ts,0);h.lineTo(0,ts);h.stroke();});
-  P[12]=mk(h=>{h.strokeStyle=S2;h.lineWidth=.5;h.beginPath();h.moveTo(0,0);h.lineTo(ts,ts);h.moveTo(ts,0);h.lineTo(0,ts);h.moveTo(0,ts*0.5);h.lineTo(ts*0.5,0);h.moveTo(ts*0.5,ts);h.lineTo(ts,ts*0.5);h.stroke();});
-  P[13]=mk(h=>{h.strokeStyle=S2;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts*0.4);h.lineTo(ts*0.5,ts*0.4);h.moveTo(ts*0.7,ts*0.4);h.lineTo(ts,ts*0.4);h.stroke();});
+  P[6]=mk(h=>{h.fillStyle=stroke;for(let i=0;i<ts;i+=3)for(let j=0;j<ts;j+=3)h.fillRect(i,j,1,1);});
+  P[7]=mk(h=>{h.strokeStyle=stroke;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts);h.lineTo(ts,0);h.moveTo(3,ts);h.lineTo(ts,3);h.stroke();});
+  P[8]=mk(h=>{h.strokeStyle=stroke;h.lineWidth=.5;h.beginPath();h.moveTo(0,ts);h.lineTo(ts,0);h.moveTo(3,ts);h.lineTo(ts,3);h.moveTo(0,7);h.lineTo(7,0);h.stroke();});
+  P[9]=mk(h=>{h.strokeStyle=stroke;h.lineWidth=.5;h.beginPath();h.moveTo(0,3);h.lineTo(ts,3);h.moveTo(0,7);h.lineTo(ts,7);h.stroke();});
+  P[10]=mk(h=>{h.strokeStyle=stroke;h.lineWidth=.5;h.beginPath();h.moveTo(0,2);h.lineTo(ts,2);h.moveTo(0,5);h.lineTo(ts,5);h.moveTo(0,8);h.lineTo(ts,8);h.stroke();});
+  P[11]=mk(h=>{h.strokeStyle=stroke;h.lineWidth=.5;h.beginPath();h.moveTo(0,0);h.lineTo(ts,ts);h.moveTo(ts,0);h.lineTo(0,ts);h.stroke();});
+  P[12]=mk(h=>{h.strokeStyle=stroke;h.lineWidth=.5;h.beginPath();h.moveTo(0,0);h.lineTo(ts,ts);h.moveTo(ts,0);h.lineTo(0,ts);h.moveTo(0,5);h.lineTo(5,0);h.moveTo(5,ts);h.lineTo(ts,5);h.stroke();});
+  P[13]=mk(h=>{h.strokeStyle=stroke;h.lineWidth=.5;h.beginPath();h.moveTo(0,4);h.lineTo(5,4);h.moveTo(7,4);h.lineTo(ts,4);h.stroke();});
   P[14]=mk(h=>{});
   return P;
 }
