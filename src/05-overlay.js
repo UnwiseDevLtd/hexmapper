@@ -51,7 +51,7 @@ function drawEdges(g, type, color, dashed){
       const [ax,ay]=center(e.a[0],e.a[1]), [bx,by]=center(e.b[0],e.b[1]);
       let px=-(by-ay), py=(bx-ax);
       const L=Math.hypot(px,py)||1; px/=L; py/=L;
-      if(py<0 || (py===0 && px<0)){ px=-px; py=-py; }   // order-independent half-space
+      if(px<0 || (px===0 && py<0)){ px=-px; py=-py; }   // order-independent half-space (prefer +x)
       px*=dlt*sign; py*=dlt*sign;
       if(!has[ai]){ ox[ai]=px; oy[ai]=py; has[ai]=1; }
       if(!has[bi]){ ox[bi]=px; oy[bi]=py; has[bi]=1; }
