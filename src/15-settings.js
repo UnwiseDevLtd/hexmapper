@@ -13,6 +13,7 @@ document.addEventListener("click",e=>{
 document.querySelectorAll("[data-vs]").forEach(b=>{
   b.onclick=()=>{ viewStyle=b.dataset.vs; document.querySelectorAll("[data-vs]").forEach(x=>x.classList.toggle("on",x===b)); dirty=true; render(); };
 });
+document.getElementById("hatchon").addEventListener("change",e=>{ hatchOn=e.target.checked; dirty=true; render(); });
 document.getElementById("hdens").addEventListener("input",e=>{
   hatchDensity=+e.target.value; document.getElementById("hdv").textContent=hatchDensity+"%";
   if(viewStyle==="hatch"){ dirty=true; render(); }

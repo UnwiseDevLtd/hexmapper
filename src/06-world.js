@@ -10,15 +10,13 @@ function bgRect(){
 function drawBackdrop(g){ const r=bgRect(); if(!r) return; g.fillStyle=bgColor; g.fillRect(r[0],r[1],r[2],r[3]); }
 function drawBgImage(g){ const r=bgRect(); if(!r) return; g.globalAlpha=bgOp; g.drawImage(bgImg,r[0],r[1],r[2],r[3]); g.globalAlpha=1; }
 function drawTilesLayer(g){
-  const bw=viewStyle==="bw"||viewStyle==="hatch", hatch=viewStyle==="hatch";
-  const patterns=hatch?buildHatchPatterns(g):null, symOvr=bw?"#333":null;
+  const bw=viewStyle==="bw", symOvr=bw?"#333":null;
+  const patterns=hatchOn?buildHatchPatterns(g):null;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const t=terrain[idx(c,r)]; if(!t||!TERR[t]) continue;
     const [cx,cy]=center(c,r); hexPath(g,cx,cy);
-    if(viewStyle==="color") g.fillStyle=TERR[t].fill;
-    else if(hatch) g.fillStyle=patterns[t]||"#fff";
-    else continue;
-    g.fill();
+    if(!bw){ g.fillStyle=TERR[t].fill; g.fill(); }
+    if(hatchOn){ hexPath(g,cx,cy); g.fillStyle=patterns[t]||"transparent"; g.fill(); }
   }
   g.strokeStyle="rgba(0,0,0,0.32)"; g.lineWidth=1;
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) outlineHex(g,c,r,tKey);
@@ -36,7 +34,7 @@ function buildWorld(includeBg){
   const showBg = includeBg && viewStyle==="color";
   if(showBg) drawBackdrop(g);
   if(showBg && !bgAbove) drawBgImage(g);
-  if(viewStyle==="bw"||viewStyle==="hatch"){ g.fillStyle="#ffffff"; g.fillRect(0,0,GRID_W,GRID_H); }
+  if(viewStyle==="bw"){ g.fillStyle="#ffffff"; g.fillRect(0,0,GRID_W,GRID_H); }
   drawTilesLayer(g);
   if(showBg && bgAbove) drawBgImage(g);
   drawTexts(g);
