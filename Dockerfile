@@ -11,5 +11,6 @@ LABEL org.opencontainers.image.title="hexmapper" \
       org.opencontainers.image.source="https://codeberg.org/UnwiseDev/hexmapper" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later"
 COPY index.html /usr/share/nginx/html/index.html
+COPY example.png /usr/share/nginx/html/example.png
 COPY --from=build /app/dist/app.js /usr/share/nginx/html/dist/app.js
 EXPOSE 80

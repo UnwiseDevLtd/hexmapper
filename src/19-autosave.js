@@ -11,7 +11,8 @@ function doSave(){
 // Legacy tile-based rivers/roads arrays are converted to edges once via the seed stub.
 function loadSaved(){
   try{
-    const s=localStorage.getItem(STORE); if(!s) return;
+    const s=localStorage.getItem(STORE);
+    if(!s){ loadExampleImage(); return; }
     const d=JSON.parse(s);
     if(d.terrain){ for(let i=0;i<d.terrain.length;i++){ const t=d.terrain[i]; if(t!==0 && !TERR[t]) throw new Error("unknown terrain id "+t); } }
     if(d.cols&&d.rows){ COLS=d.cols; ROWS=d.rows; recomputeGrid(); allocArrays(); }
@@ -24,5 +25,16 @@ function loadSaved(){
     try{ localStorage.removeItem(STORE); }catch(_){}
     COLS=100; ROWS=100; recomputeGrid(); allocArrays(); overlayEdges=new Map(); texts=[]; selText=-1;
   }
+}
+function loadExampleImage(){
+  const src = (typeof EXAMPLE_IMG !== "undefined") ? EXAMPLE_IMG : "example.png";
+  const img = new Image();
+  img.onload = function(){
+    bgImg = img; bgOp = 0.35; bgScaleMul = 1; bgOffX = 0; bgOffY = 0;
+    document.getElementById("bgstatus").textContent = "Example map loaded";
+    document.getElementById("bglabel").textContent = "Replace image…";
+    dirty = true; fitGrid(); render();
+  };
+  img.src = src;
 }
 setInterval(()=>{document.getElementById("curzoom").textContent=Math.round(cam.z*100)+"%";},200);
