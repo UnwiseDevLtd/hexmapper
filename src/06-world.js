@@ -31,7 +31,7 @@ function drawTilesLayer(g){
 }
 function buildWorld(includeBg){
   const g=wctx; g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,world.width,world.height);
-  const showBg = includeBg && viewStyle==="color";
+  const showBg = includeBg;
   if(showBg) drawBackdrop(g);
   if(showBg && !bgAbove) drawBgImage(g);
   if(viewStyle==="bw"){ g.fillStyle="#ffffff"; g.fillRect(0,0,GRID_W,GRID_H); }
