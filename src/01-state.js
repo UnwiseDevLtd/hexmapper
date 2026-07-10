@@ -21,7 +21,7 @@ function recomputeGrid(){
 recomputeGrid();
 
 let cam={x:0,y:0,z:1};
-let bgImg=null,bgOp=0.45,bgScaleMul=1,bgOffX=0,bgOffY=0;
+let bgImg=null,bgOp=0.8,bgScaleMul=1,bgOffX=0,bgOffY=0;
 let dirty=true, hover={c:-1,r:-1};
 let fontSize=14;
 let opMode="paint";
@@ -29,7 +29,7 @@ let showIds=false, idSize=9, idBg="none", idPos="center";
 let bgAbove=false;
 let bgColor="#ffffff";
 let viewStyle="color";
-let hatchDensity=50;
+let hatchDensity=80;
 
 const txtEl=document.getElementById("txt");
 const tsvEl=document.getElementById("tsv");

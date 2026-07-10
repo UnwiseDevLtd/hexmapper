@@ -6,9 +6,6 @@ function doSave(){
     edges:[...overlayEdges.values()].map(e=>({a:e.a,b:e.b,river:e.river,road:e.road})),
     texts, cam})); }catch(_){}
 }
-// No migration of incompatible data: validate the cache, and if anything is
-// unrecognised, drop the cache with a console warning and start fresh.
-// Legacy tile-based rivers/roads arrays are converted to edges once via the seed stub.
 function loadSaved(){
   try{
     const s=localStorage.getItem(STORE);
@@ -18,7 +15,7 @@ function loadSaved(){
     if(d.cols&&d.rows){ COLS=d.cols; ROWS=d.rows; recomputeGrid(); allocArrays(); }
     if(d.terrain) terrain.set(d.terrain); if(d.veg) veg.set(d.veg); if(d.entity) entity.set(d.entity); if(d.texts) texts=d.texts;
     if(Array.isArray(d.edges)){ overlayEdges=new Map(d.edges.map(e=>{ const n=normEdge(e); return [edgeKeyOf(n.a,n.b),n]; })); }
-    else if(d.rivers||d.roads){ seedEdgesFromTiles(d.rivers,d.roads); } // TEMP seed stub
+    else if(d.rivers||d.roads){ seedEdgesFromTiles(d.rivers,d.roads); }
     if(d.cam){cam.x=d.cam.x;cam.y=d.cam.y;cam.z=d.cam.z;}
   }catch(e){
     console.warn("[hexmapper] could not load cached map ("+e.message+"); clearing cache.");
@@ -30,7 +27,9 @@ function loadExampleImage(){
   const src = (typeof EXAMPLE_IMG !== "undefined") ? EXAMPLE_IMG : "example.png";
   const img = new Image();
   img.onload = function(){
-    bgImg = img; bgOp = 0.35; bgScaleMul = 1; bgOffX = 0; bgOffY = 0;
+    bgImg = img; bgOp = 0.8; bgScaleMul = 1; bgOffX = 0; bgOffY = 0;
+    document.getElementById("bgop").value = 80;
+    document.getElementById("opv").textContent = "80%";
     document.getElementById("bgstatus").textContent = "Example map loaded";
     document.getElementById("bglabel").textContent = "Replace image…";
     dirty = true; fitGrid(); render();

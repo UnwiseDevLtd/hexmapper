@@ -51,7 +51,7 @@ function buildStandalone() {
   const examplePath = path.join(root, "example.png");
   if (fs.existsSync(examplePath)) {
     const b64 = fs.readFileSync(examplePath).toString("base64");
-    exampleVar = 'const EXAMPLE_IMG="data:image/png;base64,' + b64 + '";\n';
+    exampleVar = 'const EXAMPLE_IMG="data:image/jpeg;base64,' + b64 + '";\n';
     console.log("[build] inlined example.png (" + (b64.length/1024).toFixed(0) + "KB base64)");
   }
   const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
