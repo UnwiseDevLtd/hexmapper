@@ -34,6 +34,7 @@ function loadExampleImage(){
     document.getElementById("bglabel").textContent = "Replace image…";
     dirty = true; fitGrid(); render();
   };
+  img.onerror = function(){ /* example not available — start with a blank grid */ };
   img.src = src;
 }
 setInterval(()=>{document.getElementById("curzoom").textContent=Math.round(cam.z*100)+"%";},200);
