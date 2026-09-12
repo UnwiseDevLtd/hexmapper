@@ -43,14 +43,14 @@ dev:            ## Dev: watch src + serve with auto-reload on :$(PORT)
 standalone:     ## Build standalone minified single-file HTML (dist/standalone.html)
 	node build.js --standalone
 
-release: standalone ## Tag, push, publish release + Codeberg Pages
+release: standalone ## Tag, push, publish release + GitHub Pages
 	@git tag $(VERSION) 2>/dev/null || true
 	@git push origin $(VERSION) 2>/dev/null || true
-	@node --no-network-family-autoselection scripts/publish.js || echo "(Set CODEBERG_TOKEN in .env to auto-publish release)"
-	@echo "Publishing to Codeberg Pages..."
+	@node --no-network-family-autoselection scripts/publish.js || echo "(Set GITHUB_TOKEN in .env to auto-publish release)"
+	@echo "Publishing to GitHub Pages..."
 	@BLOB=$$(git hash-object -w dist/standalone.html) && \
 	TREE=$$(printf '100644 blob %s\tindex.html\n' $$BLOB | git mktree) && \
 	COMMIT=$$(git commit-tree $$TREE -m 'publish $(VERSION)') && \
 	git push origin $$COMMIT:refs/heads/pages --force && \
-	echo "  Pages: https://UnwiseDev.codeberg.page/hexmapper/"
+	echo "  Pages: https://unwisedevltd.github.io/hexmapper/"
 	@echo "Released $(VERSION)"

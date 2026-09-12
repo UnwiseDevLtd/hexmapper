@@ -4,7 +4,7 @@
   "private": true,
   "description": "Trace an image into a hex-grid map, in the browser.",
   "license": "AGPL-3.0-or-later",
-  "homepage": "https://codeberg.org/UnwiseDev/hexmapper",
+  "homepage": "https://github.com/UnwiseDevLtd/hexmapper",
   "scripts": {
     "build": "node build.js",
     "watch": "node build.js --watch",
